@@ -11,6 +11,17 @@ double_clap = true               # se réveiller en tapant deux fois dans les ma
 sensibilite_clap = 0.5           # de 0 (peu sensible) à 1 (très sensible)
 vitesse_voix = 180               # vitesse de parole
 
+[fichiers]
+# Viky cherche vos fichiers dans Bureau, Documents, Téléchargements, Images et Vidéos
+# (y compris OneDrive). Ajoutez ici d'autres dossiers, par exemple celui de vos spectacles :
+dossiers = [
+  # 'C:\Users\Moi\Spectacles',
+]
+
+[projecteur]
+# true = le diaporama s'affiche sur le projecteur, et vos notes (mode présentateur) sur le PC
+vue_presentateur = false
+
 [applications]
 # Ajoutez vos propres applications : "nom prononcé" = "commande ou chemin complet"
 # "mon jeu" = 'C:\Jeux\MonJeu\jeu.exe'

@@ -25,6 +25,8 @@ class Config:
     voice_rate: int = 180
     apps: dict[str, str] = field(default_factory=dict)
     sites: dict[str, str] = field(default_factory=dict)
+    file_folders: list[Path] = field(default_factory=list)
+    presenter_view: bool = False
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -45,6 +47,14 @@ def load_config(path: Path | None = None) -> Config:
     config.voice_rate = int(general.get("vitesse_voix", config.voice_rate))
     config.apps = {normalize(k): v for k, v in data.get("applications", {}).items()}
     config.sites = {normalize(k): v for k, v in data.get("sites", {}).items()}
+
+    files = data.get("fichiers", {})
+    extra = [Path(f).expanduser() for f in files.get("dossiers", [])]
+    if extra:
+        from .files import default_folders
+
+        config.file_folders = [f for f in extra if f.exists()] + default_folders()
+    config.presenter_view = bool(data.get("projecteur", {}).get("vue_presentateur", False))
 
     if config.lang not in config.listen_langs:
         config.listen_langs.insert(0, config.lang)

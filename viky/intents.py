@@ -23,8 +23,13 @@ _FILLERS = {
 }
 
 # L'ordre compte : la première règle qui correspond l'emporte.
-# Les commandes « verbe + complément » passent avant les mots-clés,
-# pour que « cherche la date de noël » soit une recherche et pas la date.
+# Les commandes précises (projecteur, Excel, diapos) passent avant les commandes
+# générales, et les « verbe + complément » avant les mots-clés, pour que
+# « cherche la date de noël » soit une recherche et pas la date.
+_SCREEN_FR = r"(le |la |l )?(projecteur|retroprojecteur|retro projecteur|videoprojecteur|grand ecran|ecran du public)"
+_KINDS_FR = r"(fichier|document|pdf|presentation|diaporama|powerpoint|diapo|tableau|excel|classeur|photo|image|video)"
+_KINDS_EN = r"(file|document|pdf|presentation|slideshow|powerpoint|slides|spreadsheet|excel|workbook|photo|picture|image|video)"
+
 _PATTERNS: dict[str, list[tuple[str, str]]] = {
     "fr": [
         ("quit", r"^(arrete toi|au revoir|eteins toi|bonne nuit|quitte toi|ferme toi|desactive toi)$"),
@@ -32,6 +37,43 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("greet", r"^(bonjour|salut|coucou|bonsoir|hello)$"),
         ("lang_en", r"^(parle|passe|reponds)( moi)? en anglais$"),
         ("lang_fr", r"^(parle|passe|reponds)( moi)? en francais$"),
+        # --- diaporama et projecteur
+        ("next", r"^((diapo|diapositive|page|slide|image|photo) suivante|suivant|suivante|la suite|avance)$"),
+        ("previous", r"^((diapo|diapositive|page|slide|image|photo) precedente|precedent|precedente|"
+                     r"reviens en arriere|recule|retour)$"),
+        ("goto", r"^(va|aller|passe|reviens|retourne)( a| au)? (la )?(diapo|diapositive|page|slide)"
+                 r"( numero)? (?P<n>.+)$"),
+        ("show_start", r"^(lance|demarre|commence|debute)( le| la)? (diaporama|presentation|projection)$"),
+        ("show_end", r"^(arrete|termine|quitte|stoppe|ferme)( le| la)? (diaporama|presentation|projection)$"),
+        ("black", r"^(ecran noir|noir|mets (l ecran )?au noir|eteins l ecran|coupe l image)$"),
+        ("resume", r"^(rallume l ecran|reprends|reprise|remets l image|ecran normal|enleve le noir)$"),
+        ("fullscreen", r"(plein ecran)$"),
+        ("display_clone", r"^(duplique|dupliquer|clone)( l ecran| les ecrans)?$"),
+        ("display_extend", r"^(etends|etendre|ecran etendu)( l ecran| les ecrans)?$"),
+        ("display_external", r"^((le )?projecteur seulement|seulement le projecteur|uniquement le projecteur)$"),
+        ("display_internal", r"^((l )?ecran du (pc|portable|ordinateur) seulement|deconnecte le projecteur)$"),
+        ("project_current", rf"^(envoie|mets|bascule|deplace)( ca| la fenetre| tout ca)? (sur|au|vers) {_SCREEN_FR}$"),
+        ("project", rf"^(mets|envoie|affiche|montre|ouvre|lance)( moi)? (?P<target>.+) (sur|au|vers) {_SCREEN_FR}$"),
+        ("project", r"^(projette|projeter|diffuse|diffuser)( moi)? (?P<target>.+)$"),
+        ("close_current", r"^(ferme|quitte)( le| la| l| ce| cette)? (fichier|document|fenetre|pdf|tableau|"
+                          r"classeur|image|photo|video)$|^ferme (ca|tout ca)$"),
+        # --- Excel et PowerPoint
+        ("cell_set", r"^(mets|ecris|inscris|entre|saisis|tape|note)( le nombre| la valeur| le texte)? (?P<value>.+) "
+                     r"(dans|en) (la )?(cellule|case) (?P<cell>.+)$"),
+        ("cell_set", r"^(la )?(cellule|case) (?P<cell>.+?) (egale|vaut|devient|est egale a) (?P<value>.+)$"),
+        ("cell_get", r"^(lis|lire|dis moi|donne moi|que vaut|combien vaut|qu y a t il dans)( le contenu de)? "
+                     r"(la )?(cellule|case) (?P<cell>.+)$"),
+        ("cell_clear", r"^(efface|vide|supprime)( le contenu de)? (la )?(cellule|case) (?P<cell>.+)$"),
+        ("save", r"^(enregistre|sauvegarde|sauve)( le fichier| le document| le classeur| la presentation| tout)?$"),
+        ("sheet_next", r"^(feuille|onglet) suivante?$"),
+        ("sheet_previous", r"^(feuille|onglet) precedente?$"),
+        ("slide_title", r"^(change|modifie|remplace) le titre( de (la|cette) (diapo|diapositive|slide|page))? "
+                        r"(en|par) (?P<text>.+)$"),
+        ("slide_title", r"^(mets|ecris) (?P<text>.+) (comme|en) titre$"),
+        # --- fichiers
+        ("open_file", rf"^(ouvre|ouvrir|affiche|montre|cherche|trouve|retrouve)( moi)? "
+                      rf"(?P<target>(le |la |l |les |mon |ma |mes |un |une )?{_KINDS_FR}\b.*)$"),
+        # --- internet et divers
         ("youtube", r"^(mets|joue|lance|cherche|mettre|jouer) (?P<query>.+) sur youtube$"),
         ("search", r"^(cherche|recherche|google|chercher|rechercher)"
                    r"( sur (internet|google|le web))? (?P<query>.+)$"),
@@ -57,6 +99,30 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("greet", r"^(hello|hi|hey|good (morning|evening|afternoon))$"),
         ("lang_fr", r"^(speak|switch to|answer in|talk in) french$"),
         ("lang_en", r"^(speak|switch to|answer in|talk in) english$"),
+        ("next", r"^(next( slide| page| picture)?|go on|continue)$"),
+        ("previous", r"^(previous( slide| page| picture)?|go back|back)$"),
+        ("goto", r"^(go|jump|skip)( back)? to (slide|page)( number)? (?P<n>.+)$"),
+        ("show_start", r"^(start|begin|launch) the (slideshow|presentation)$"),
+        ("show_end", r"^(stop|end|exit|close) the (slideshow|presentation)$"),
+        ("black", r"^(black screen|blackout|black out the screen)$"),
+        ("resume", r"^(resume|unblack|show the screen again)$"),
+        ("fullscreen", r"full ?screen$"),
+        ("display_clone", r"^(duplicate|mirror)( the)? (screen|screens|display)$"),
+        ("display_extend", r"^extend( the)? (screen|screens|display)$"),
+        ("display_external", r"^projector only$"),
+        ("display_internal", r"^(pc|computer|laptop) screen only$"),
+        ("project_current", r"^(send|put|move) (it|this|the window) (to|on) the (projector|big screen)$"),
+        ("project", r"^(put|send|show|open) (?P<target>.+) on the (projector|big screen)$"),
+        ("project", r"^(project|cast) (?P<target>.+)$"),
+        ("close_current", r"^close (the |this )?(file|document|window|pdf|spreadsheet|picture|video)$"),
+        ("cell_set", r"^(put|write|enter|type) (?P<value>.+) in (cell|box) (?P<cell>.+)$"),
+        ("cell_get", r"^(read|what is in|what s in) cell (?P<cell>.+)$"),
+        ("cell_clear", r"^(clear|erase|delete) cell (?P<cell>.+)$"),
+        ("save", r"^save( the file| it| everything| the document)?$"),
+        ("sheet_next", r"^next (sheet|tab)$"),
+        ("sheet_previous", r"^previous (sheet|tab)$"),
+        ("slide_title", r"^change the (slide )?title to (?P<text>.+)$"),
+        ("open_file", rf"^(open|show me|find)( up)? (?P<target>(the |my |a )?{_KINDS_EN}\b.*)$"),
         ("youtube", r"^(play|put on|search|search for) (?P<query>.+) on youtube$"),
         ("search", r"^(search|google|look up)( for| the web for| online for)? (?P<query>.+)$"),
         ("note", r"^(take a note|note|write down|remember)( that)? (?P<text>.+)$"),

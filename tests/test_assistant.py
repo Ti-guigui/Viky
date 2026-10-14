@@ -27,6 +27,7 @@ def setup():
     calls = []
     fake = types.SimpleNamespace(
         clean_target=lambda t: t,
+        resolve_target=lambda t, apps=None, sites=None: ("app", t),
         open_target=lambda t, apps, sites: calls.append(("open", t)) or True,
         close_app=lambda t, apps: calls.append(("close", t)) or False,
         web_search=lambda q: calls.append(("search", q)),
@@ -38,7 +39,12 @@ def setup():
         add_note=lambda t: calls.append(("note", t)),
     )
     speaker, clock = FakeSpeaker(), Clock()
-    return Assistant(Config(), speaker, fake, clock), speaker, calls, clock
+    return Assistant(Config(), speaker, fake, files=FakeFiles(), clock=clock), speaker, calls, clock
+
+
+class FakeFiles:
+    def find(self, spoken):
+        return None
 
 
 def test_ignored_without_wake_word(setup):

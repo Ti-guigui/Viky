@@ -16,9 +16,10 @@ MESSAGES: dict[str, dict] = {
         "greet": ["Bonjour !", "Salut ! Que puis-je faire pour vous ?"],
         "whoami": "Je suis Viky, votre assistante vocale. Je fonctionne entièrement hors ligne, "
                   "sur votre ordinateur.",
-        "help": "Je peux ouvrir des applications, des sites et des dossiers, chercher sur internet "
-                "ou sur YouTube, donner l'heure et la date, régler le volume, prendre une photo ou "
-                "une capture d'écran, prendre des notes, verrouiller l'ordinateur et raconter des blagues.",
+        "help": "Je peux ouvrir vos fichiers, présentations et tableaux, les afficher sur le projecteur, "
+                "faire défiler les diapos et modifier Excel à la voix. Je peux aussi ouvrir des "
+                "applications et des sites, chercher sur internet, donner l'heure, régler le volume, "
+                "prendre des photos et des notes, et raconter des blagues.",
         "opening": "J'ouvre {name}.",
         "open_failed": "Je n'ai pas trouvé {name}.",
         "closing": "Je ferme {name}.",
@@ -35,6 +36,18 @@ MESSAGES: dict[str, dict] = {
         "note": "C'est noté.",
         "lang": "D'accord, je parle français.",
         "failed": "Désolée, ça n'a pas fonctionné.",
+        "not_available": "Ce n'est pas possible pour le moment : le logiciel n'est pas ouvert "
+                         "ou cette fonction n'existe pas sur ce système.",
+        "ok": "D'accord.",
+        "no_projector": "Je ne détecte pas de projecteur. Vérifiez le câble HDMI et que l'écran est en mode étendu.",
+        "projecting": "J'affiche {name} sur le projecteur.",
+        "file_not_found": "Je n'ai pas trouvé de fichier qui ressemble à {name}.",
+        "cell_set": "C'est fait, {cell} vaut {value}.",
+        "cell_get": "La cellule {cell} contient {value}.",
+        "cell_empty": "La cellule {cell} est vide.",
+        "bad_cell": "Je n'ai pas compris le nom de la cellule. Dites par exemple : cellule B3.",
+        "saved": "C'est enregistré.",
+        "title_set": "Titre modifié.",
         "jokes": [
             "Pourquoi les plongeurs plongent-ils toujours en arrière ? "
             "Parce que sinon, ils tombent dans le bateau.",
@@ -55,9 +68,9 @@ MESSAGES: dict[str, dict] = {
         "thanks": ["You're welcome!", "My pleasure!"],
         "greet": ["Hello!", "Hi! What can I do for you?"],
         "whoami": "I'm Viky, your voice assistant. I run entirely offline, on your computer.",
-        "help": "I can open apps, websites and folders, search the web or YouTube, tell the time "
-                "and date, change the volume, take a photo or a screenshot, take notes, lock the "
-                "computer and tell jokes.",
+        "help": "I can open your files, slides and spreadsheets, show them on the projector, "
+                "move through slides and edit Excel by voice. I can also open apps and websites, "
+                "search the web, tell the time, change the volume, take photos and notes, and tell jokes.",
         "opening": "Opening {name}.",
         "open_failed": "I couldn't find {name}.",
         "closing": "Closing {name}.",
@@ -74,6 +87,18 @@ MESSAGES: dict[str, dict] = {
         "note": "Noted.",
         "lang": "Okay, I'll speak English.",
         "failed": "Sorry, that didn't work.",
+        "not_available": "That's not possible right now: the program isn't open or this "
+                         "feature doesn't exist on this system.",
+        "ok": "Okay.",
+        "no_projector": "I can't find a projector. Check the HDMI cable and that the display is extended.",
+        "projecting": "Showing {name} on the projector.",
+        "file_not_found": "I couldn't find a file like {name}.",
+        "cell_set": "Done, {cell} is now {value}.",
+        "cell_get": "Cell {cell} contains {value}.",
+        "cell_empty": "Cell {cell} is empty.",
+        "bad_cell": "I didn't get the cell name. Say for example: cell B3.",
+        "saved": "Saved.",
+        "title_set": "Title changed.",
         "jokes": [
             "Why do programmers prefer dark mode? Because light attracts bugs.",
             "Why was the computer cold? It left its Windows open.",
