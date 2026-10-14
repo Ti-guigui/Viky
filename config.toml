@@ -1,0 +1,21 @@
+# Configuration de Viky — modifiez ce fichier puis relancez Viky.
+
+[general]
+langue = "fr"                    # langue de réponse par défaut : "fr" ou "en"
+langues_ecoute = ["fr", "en"]    # langues comprises (retirez "en" pour économiser de la mémoire)
+# Variantes acceptées pour le prénom. Si Viky ne vous répond pas, regardez la ligne
+# « Entendu : … » dans la fenêtre et ajoutez ici le mot qu'elle a compris à la place de « Viky ».
+mots_de_reveil = ["viky", "vicky", "vicki", "viki", "vikki", "mickey", "mikey", "wiki"]
+duree_eveil = 8                  # secondes pendant lesquelles Viky écoute après son nom
+double_clap = true               # se réveiller en tapant deux fois dans les mains
+sensibilite_clap = 0.5           # de 0 (peu sensible) à 1 (très sensible)
+vitesse_voix = 180               # vitesse de parole
+
+[applications]
+# Ajoutez vos propres applications : "nom prononcé" = "commande ou chemin complet"
+# "mon jeu" = 'C:\Jeux\MonJeu\jeu.exe'
+# "spotify" = 'shell:AppsFolder\SpotifyAB.SpotifyMusic_zpdnekdrzrea0!Spotify'
+
+[sites]
+# Ajoutez vos propres sites : "nom prononcé" = "adresse"
+# "mon blog" = "https://exemple.com"
