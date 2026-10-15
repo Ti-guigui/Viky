@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from .audio import SAMPLE_RATE
+from .text import normalize
 
 
 class ModelMissing(Exception):
@@ -86,18 +87,38 @@ def pick_size(size: str, device: str) -> str:
     return "large-v3-turbo" if device == "cuda" else "small"
 
 
+# Liste de mots donnée à Whisper : elle l'oriente vers le prénom Viky et le vocabulaire des
+# commandes, ce qui aide beaucoup quand la prononciation est inhabituelle. Surtout pas de
+# commande complète : quand Whisper ne comprend rien, il lui arrive de recopier cette liste,
+# et une commande recopiée serait exécutée.
+COMMAND_PROMPT = {
+    "fr": "Viky. Vocabulaire : rappelle, projette, présentation, diaporama, diapo, suivante, "
+          "précédente, écran, noir, météo, mails, rendez-vous, agenda, spectacle, révèle, carte, "
+          "musique, pause, enregistre, verrouille, navigateur.",
+    "en": "Viky. Vocabulary: remind, presentation, slide, next, previous, weather, calendar.",
+}
+
+
 class WhisperRecognizer:
-    """Transcrit avec Whisper ; détecte seul la langue parlée."""
+    """Transcrit avec Whisper.
+
+    La langue principale est imposée, sauf si Whisper est vraiment sûr d'entendre
+    une autre langue autorisée : avec un accent, il se trompe souvent de langue,
+    et la transcription devient alors incompréhensible.
+    """
 
     name = "Whisper"
 
     def __init__(self, langs: list[str], models_dir: Path, size: str = "auto", device: str = "auto",
-                 wake_words: list[str] | None = None) -> None:
+                 wake_words: list[str] | None = None, other_lang_threshold: float = 0.9,
+                 vocabulary: list[str] | None = None) -> None:
         from faster_whisper import WhisperModel
 
         self.langs = langs
-        # Le prénom dans la consigne aide Whisper à écrire « Viky » et pas « Vicky » ou « Mickey ».
-        self.prompt = "Viky. " if not wake_words else f"{wake_words[0].capitalize()}. "
+        self.other_lang_threshold = other_lang_threshold
+        name = (wake_words or ["viky"])[0].capitalize()
+        extra = (" " + ", ".join(vocabulary) + ".") if vocabulary else ""
+        self.prompts = {lang: COMMAND_PROMPT.get(lang, "Viky.").replace("Viky", name) + extra for lang in langs}
         download = models_dir / "whisper"
         attempts = [("cuda", "float16"), ("cpu", "int8")] if device in ("auto", "cuda") else [("cpu", "int8")]
         error = None
@@ -110,6 +131,8 @@ class WhisperRecognizer:
                 if dev == "cuda":
                     self._check()  # échoue tout de suite si les bibliothèques CUDA manquent
                 self.device = dev
+                # Sur carte graphique, on peut se permettre une recherche plus soigneuse.
+                self.beam_size = 5 if dev == "cuda" else 2
                 return
             except Exception as exc:  # pas de carte NVIDIA ou CUDA incomplet : on passe au processeur
                 error = exc
@@ -120,29 +143,46 @@ class WhisperRecognizer:
 
         list(self.model.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32), language=self.langs[0])[0])
 
+    def _run(self, samples, lang: str | None):
+        prompt = self.prompts.get(lang or self.langs[0])
+        segments, info = self.model.transcribe(samples, beam_size=self.beam_size, language=lang,
+                                               initial_prompt=prompt, condition_on_previous_text=False,
+                                               vad_filter=False)
+        return " ".join(segment.text.strip() for segment in segments).strip(), info
+
     def transcribe(self, audio: bytes) -> dict[str, str]:
         import numpy as np
 
         samples = np.frombuffer(audio, dtype=np.int16).astype(np.float32) / 32768.0
-        segments, info = self.model.transcribe(samples, beam_size=1, initial_prompt=self.prompt,
-                                               condition_on_previous_text=False, vad_filter=False)
+        main = self.langs[0]
+        if len(self.langs) == 1:
+            text, _ = self._run(samples, main)
+            return {main: self._clean(text, main)}
+        text, info = self._run(samples, None)
         lang = info.language
-        if lang not in self.langs:  # langue inattendue : on impose la langue principale
-            lang = self.langs[0]
-            segments, _ = self.model.transcribe(samples, beam_size=1, language=lang, initial_prompt=self.prompt,
-                                                condition_on_previous_text=False)
-        text = " ".join(segment.text.strip() for segment in segments).strip()
-        if text.strip(" .") == self.prompt.strip(" ."):  # Whisper répète parfois la consigne sur un silence
-            text = ""
-        return {lang: text}
+        if lang != main and (lang not in self.langs or info.language_probability < self.other_lang_threshold):
+            lang = main  # langue incertaine : on retranscrit dans la langue principale
+            text, _ = self._run(samples, main)
+        return {lang: self._clean(text, lang)}
+
+    def _clean(self, text: str, lang: str) -> str:
+        # Sur un silence, Whisper recopie parfois la phrase d'exemple : on l'ignore. Une
+        # vraie commande (« diapo suivante ») n'en reprend qu'un petit morceau, on la garde.
+        heard, prompt = normalize(text), normalize(self.prompts.get(lang, ""))
+        words = heard.split()
+        if heard and (heard in prompt and len(words) >= 3 or "vocabulaire" in words or "vocabulary" in words):
+            return ""
+        return text
 
 
 def make_recognizer(engine: str, langs: list[str], models_dir: Path, size: str = "auto",
-                    device: str = "auto", wake_words: list[str] | None = None):
+                    device: str = "auto", wake_words: list[str] | None = None,
+                    other_lang_threshold: float = 0.9, vocabulary: list[str] | None = None):
     """Choisit le meilleur moteur disponible : Whisper, sinon Vosk."""
     if engine == "whisper":
         try:
-            recognizer = WhisperRecognizer(langs, models_dir, size, device, wake_words)
+            recognizer = WhisperRecognizer(langs, models_dir, size, device, wake_words,
+                                           other_lang_threshold, vocabulary)
             where = "carte graphique" if recognizer.device == "cuda" else "processeur"
             print(f"[Viky] Reconnaissance vocale Whisper ({recognizer.size}) sur le {where}.")
             return recognizer

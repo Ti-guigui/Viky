@@ -197,6 +197,17 @@ lancer_viky.bat --texte
 
 ---
 
+### Si Viky vous comprend mal (accent, R difficiles…)
+
+1. **Apprenez-lui votre voix** : double-cliquez sur **`apprendre_ma_voix.bat`** et lisez les phrases proposées (5 minutes). Viky note comment elle vous entend, par exemple « wappelle » pour « rappelle », et se corrige ensuite toute seule. Refaites-le quand vous voulez : les corrections s'ajoutent.
+2. Viky **tolère les R** : si une phrase n'est pas comprise, elle la compare à ses commandes sans tenir compte des R (« pwojette la pésentation » → « projette la présentation »).
+3. Viky **reste en français**, même si votre accent fait hésiter la reconnaissance vocale. Réglage `seuil_anglais` dans `config.toml`.
+4. Ajoutez vos **mots importants** (prénoms, noms de fichiers ou de tours) dans `mots_importants`, pour que Whisper les reconnaisse mieux.
+5. Un **micro-casque** ou un micro proche de la bouche change énormément la précision, surtout en salle.
+6. En dernier recours, **tapez la commande** dans le HUD, ou utilisez la télécommande du téléphone.
+
+Les corrections apprises ne s'appliquent qu'aux commandes : le texte que vous dictez (e-mails, notes) reste tel que vous l'avez dit.
+
 ## 4. Réglages (`config.toml`)
 
 Ouvrez `config.toml` avec le Bloc-notes. Vous pouvez y régler :
@@ -222,6 +233,7 @@ Ouvrez `config.toml` avec le Bloc-notes. Vous pouvez y régler :
 | `viky/ui.py`, `tkloop.py` | Interface Jarvis : widget et HUD |
 | `viky/system.py` | Contrôle du PC |
 | `viky/reminders.py`, `memory.py` | Rappels, minuteurs et mémoire |
+| `viky/pronunciation.py`, `training.py` | Adaptation à votre prononciation et apprentissage de la voix |
 | `viky/mail.py`, `agenda.py`, `accounts.py` | E-mails, agendas et comptes |
 | `viky/intents.py` | Comprend les commandes (français et anglais) |
 | `viky/assistant.py` | Le cerveau : réveil, commandes, mode spectacle |

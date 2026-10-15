@@ -61,6 +61,8 @@ class Config:
     recognizer: str = "whisper"
     whisper_size: str = "auto"
     whisper_device: str = "auto"
+    other_lang_threshold: float = 0.9
+    vocabulary: list[str] = field(default_factory=list)
 
     def mail_accounts(self) -> list:
         """Comptes e-mail dont le mot de passe d'application est enregistré."""
@@ -137,6 +139,8 @@ def load_config(path: Path | None = None) -> Config:
     config.recognizer = listening.get("moteur", config.recognizer)
     config.whisper_size = listening.get("taille_whisper", config.whisper_size)
     config.whisper_device = listening.get("appareil", config.whisper_device)
+    config.other_lang_threshold = float(listening.get("seuil_anglais", config.other_lang_threshold))
+    config.vocabulary = list(listening.get("mots_importants", config.vocabulary))
 
     voice = data.get("voix", {})
     config.voice_engine = voice.get("moteur", config.voice_engine)

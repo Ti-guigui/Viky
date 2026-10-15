@@ -21,6 +21,11 @@ mode = "widget"
 moteur = "whisper"
 taille_whisper = "auto"    # auto = large-v3-turbo sur carte NVIDIA, small sur processeur
 appareil = "auto"          # "auto" = carte graphique NVIDIA si possible, sinon processeur
+# Viky reste en français, sauf si Whisper est sûr à 90 % d'entendre de l'anglais.
+# Si Viky répond parfois en anglais par erreur, montez à 0.97 ; pour ne jamais passer en anglais : 1.0
+seuil_anglais = 0.9
+# Mots que Viky doit bien reconnaître : prénoms de vos proches, noms de vos fichiers, de vos tours…
+mots_importants = []       # exemple : ["Marie", "Paul", "Houdini", "budget 2026"]
 
 [voix]
 # "piper" = voix naturelle (recommandé), "systeme" = voix de Windows

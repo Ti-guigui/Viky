@@ -41,7 +41,8 @@ def run_voice(assistant: Assistant) -> None:
     config = assistant.config
     try:
         recognizer = make_recognizer(config.recognizer, config.listen_langs, MODELS_DIR,
-                                     config.whisper_size, config.whisper_device, config.wake_words)
+                                     config.whisper_size, config.whisper_device, config.wake_words,
+                                     config.other_lang_threshold, config.vocabulary)
     except ModelMissing:
         print("Aucun modèle de reconnaissance vocale trouvé.\n"
               "Lancez d'abord : python -m viky --telecharger-modeles")
@@ -84,6 +85,23 @@ def run_voice(assistant: Assistant) -> None:
             # Oublie ce que le micro a capté pendant que Viky parlait.
             _drain(blocks)
             segmenter.reset()
+
+
+def learn_voice(config) -> None:
+    """Apprentissage de la prononciation (apprendre_ma_voix.bat)."""
+    from .intents import all_patterns
+    from .pronunciation import Pronunciation, command_vocabulary
+    from .recognizer import make_recognizer
+    from .training import run
+
+    # Une seule langue pendant l'apprentissage : les phrases sont en français.
+    recognizer = make_recognizer(config.recognizer, [config.lang], MODELS_DIR, config.whisper_size,
+                                 config.whisper_device, config.wake_words, 1.0, config.vocabulary)
+    pronunciation = Pronunciation(config.data_dir / "prononciation.json", command_vocabulary(all_patterns()))
+    count = run(recognizer, pronunciation, config.lang)
+    print(f"\nTerminé : {count} correction(s) apprise(s), enregistrées dans {pronunciation.path}.")
+    print("Relancez Viky pour en profiter. Vous pouvez refaire l'apprentissage quand vous voulez.")
+    input("Appuyez sur Entrée pour fermer.")
 
 
 def start_interface(assistant: Assistant) -> None:
@@ -130,6 +148,8 @@ def main() -> None:
     parser.add_argument("--muet", action="store_true", help="afficher les réponses sans les prononcer")
     parser.add_argument("--configurer-comptes", action="store_true",
                         help="régler les comptes Gmail / iCloud et les agendas, puis quitter")
+    parser.add_argument("--apprendre", action="store_true",
+                        help="apprendre votre voix et votre prononciation, puis quitter")
     parser.add_argument("--sans-interface", action="store_true", help="ne pas ouvrir le widget ni le HUD")
     parser.add_argument("--hud", action="store_true", help="ouvrir directement le grand HUD")
     parser.add_argument("--langue", choices=["fr", "en"], help="langue de réponse par défaut")
@@ -149,6 +169,10 @@ def main() -> None:
         from .config import DEFAULT_CONFIG
 
         setup(args.config or DEFAULT_CONFIG)
+        return
+
+    if args.apprendre:
+        learn_voice(config)
         return
 
     if args.telecharger_modeles:

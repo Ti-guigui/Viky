@@ -17,11 +17,12 @@ from . import projector as default_projector
 from .brain import Brain, BrainUnavailable
 from .config import Config
 from .files import FileIndex, kind_of, split_kind
-from .intents import Intent, parse_any
+from .intents import Intent, all_patterns, parse_any
 from .magic import STAGE_PERSONA, SUSPENSE, MagicShow, parse_card
 from . import mail as mail_module
 from .agenda import Agenda, day_range
 from .memory import Memory
+from .pronunciation import Pronunciation, command_vocabulary
 from .reminders import Reminder, Reminders, parse_duration, parse_reminder
 from .messages import date_sentence, say, time_sentence
 from .numbers import parse_cell, parse_number, parse_value
@@ -50,6 +51,7 @@ class Assistant:
                  reminders: Reminders | None = None,
                  agenda: Agenda | None = None,
                  mailer: ModuleType = mail_module,
+                 pronunciation: Pronunciation | None = None,
                  clock: Callable[[], float] = time.monotonic,
                  pause: Callable[[float], None] = time.sleep) -> None:
         self.config = config
@@ -83,6 +85,8 @@ class Assistant:
         self.mail_accounts = config.mail_accounts()
         self.agenda = agenda or config.agenda()
         self.last_mails: list = []
+        self.pronunciation = pronunciation or Pronunciation(config.data_dir / "prononciation.json",
+                                                            command_vocabulary(all_patterns()))
         self.listeners: list = []  # interface graphique : reçoit les événements de Viky
         self._set_persona()
         self.clock = clock
@@ -131,11 +135,14 @@ class Assistant:
         if self.magic.stage_mode and self._stage_cue(texts):
             return True
         heard_wake = False
-        stripped: dict[str, str] = {}
+        stripped: dict[str, str] = {}  # phrase telle qu'entendue, sans « Viky »
+        corrected: dict[str, str] = {}  # même phrase avec les corrections apprises (« wappelle » -> « rappelle »)
         for lang, text in texts.items():
             found, rest = strip_wake_word(tidy(text), self.config.wake_words)
-            heard_wake = heard_wake or found
-            stripped[lang] = rest
+            found_fixed, rest_fixed = strip_wake_word(tidy(self.pronunciation.correct(text)), self.config.wake_words)
+            heard_wake = heard_wake or found or found_fixed
+            stripped[lang] = rest if found or not found_fixed else rest_fixed
+            corrected[lang] = rest_fixed
 
         if require_wake and not heard_wake and not self.is_awake():
             return True
@@ -158,6 +165,17 @@ class Assistant:
 
         order = [self.lang] + [lang for lang in texts if lang != self.lang]
         intent = parse_any(stripped, order)
+        if intent is None and corrected != stripped:
+            # Pas compris : on réessaie avec les corrections apprises pendant l'apprentissage de la voix.
+            intent = parse_any(corrected, order)
+        if intent is None:
+            # Toujours pas : on rapproche les mots des commandes connues, sans tenir compte des R.
+            alike = {lang: self.pronunciation.sound_alike(text) for lang, text in corrected.items()}
+            alike = {lang: text for lang, text in alike.items() if text}
+            if alike:
+                intent = parse_any(alike, order)
+                if intent:
+                    print(f"[Viky] Compris par rapprochement : {alike}")
         if intent is None:
             question = stripped.get(self.lang, "")
             if heard_wake and not any(stripped.values()):

@@ -47,7 +47,10 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
                    r"montre toi|affiche toi)$"),
         ("ui_widget", r"^(mode discret|reduis l interface|cache l interface|ferme l interface|cache toi)$"),
         # --- mémoire et conversation
-        ("set_name", r"^(appelle moi|mon prenom est|mon nom est|je m appelle) (?P<name>.+)$"),
+        # « appelle-moi Guillaume » ; mais « (r)appelle-moi d'appeler Paul » est un rappel mal prononcé
+        ("set_name", r"^(appelle moi|mon prenom est|mon nom est|je m appelle) "
+                     r"(?P<name>(?!(de|d|qu|que|dans|demain|a|vers|ce|cet|cette) )[^ ]+( [^ ]+)?)$"),
+        ("remind", r"^(w?appel+e moi)(?P<rest> (de|d|qu|que|dans|demain|a|vers) .*)$"),
         ("remember", r"^(souviens toi|rappelle toi|retiens bien|retiens|memorise|n oublie pas)( que| de| d)? (?P<fact>.+)$"),
         ("recall", r"(que sais tu (de|sur) moi|qu est ce que tu sais (de|sur) moi|de quoi tu te souviens|qu as tu retenu)"),
         ("forget", r"^(oublie tout|efface ta memoire|oublie ce que tu sais sur moi)$"),
@@ -87,8 +90,8 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("brightness_set", r"^(mets |regle )?(la )?luminosite (a|au|sur) (?P<level>.+?)( pour cent)?$"),
         ("brightness_up", r"((monte|augmente) (la )?luminosite|plus lumineux)"),
         ("brightness_down", r"((baisse|diminue) (la )?luminosite|moins lumineux)"),
-        ("media_pause", r"^(pause|mets (la musique )?en pause|arrete la musique|reprends la musique|relance la musique|"
-                        r"lecture|play)$"),
+        ("media_pause", r"^(pause|mets (la musique )?en pause( la musique)?|(mets )?pause (la )?musique|"
+                        r"arrete la musique|reprends la musique|relance la musique|lecture|play)$"),
         ("media_next", r"^((chanson|musique|morceau|titre|piste) suivante?|(passe|change) (la chanson|de chanson|"
                        r"la musique|de musique))$"),
         ("media_previous", r"^(chanson|musique|morceau|titre|piste) precedente?$"),
@@ -286,6 +289,11 @@ _COMPILED = {
 }
 
 LANGS = tuple(_PATTERNS)
+
+
+def all_patterns() -> list[str]:
+    """Toutes les règles, pour construire le vocabulaire des commandes."""
+    return [pattern for patterns in _PATTERNS.values() for _, pattern in patterns]
 
 
 def clean(text: str, lang: str) -> tuple[str, str]:
