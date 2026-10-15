@@ -22,6 +22,28 @@ dossiers = [
 # true = le diaporama s'affiche sur le projecteur, et vos notes (mode présentateur) sur le PC
 vue_presentateur = false
 
+[meteo]
+# Laissez vide pour que Viky trouve votre ville automatiquement (d'après votre connexion internet).
+ville = ""
+
+[actualites]
+nombre_de_titres = 5
+# Flux RSS utilisés (laissez commenté pour garder France Info / Le Monde et BBC) :
+# flux_fr = ["https://www.francetvinfo.fr/titres.rss", "https://www.lemonde.fr/rss/une.xml"]
+# flux_en = ["https://feeds.bbci.co.uk/news/world/rss.xml"]
+
+[ia]
+# IA locale gratuite (Ollama, https://ollama.com) pour les questions courantes
+ia_locale = true
+modele_local = "qwen2.5:7b"       # sur un PC modeste (8 Go de RAM) : "qwen2.5:3b"
+adresse_ollama = "http://localhost:11434"
+
+# Claude pour les recherches complètes et l'actualité approfondie (payant, internet requis).
+# Collez votre clé ici, ou mettez-la dans la variable d'environnement ANTHROPIC_API_KEY.
+claude = true
+modele_claude = "claude-opus-5-5"
+cle_claude = ""
+
 [applications]
 # Ajoutez vos propres applications : "nom prononcé" = "commande ou chemin complet"
 # "mon jeu" = 'C:\Jeux\MonJeu\jeu.exe'

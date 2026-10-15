@@ -39,7 +39,8 @@ def setup():
         add_note=lambda t: calls.append(("note", t)),
     )
     speaker, clock = FakeSpeaker(), Clock()
-    return Assistant(Config(), speaker, fake, files=FakeFiles(), clock=clock), speaker, calls, clock
+    return Assistant(Config(), speaker, fake, files=FakeFiles(), clock=clock,
+                     brain=types.SimpleNamespace(available=False, use_claude=False, history=[])), speaker, calls, clock
 
 
 class FakeFiles:

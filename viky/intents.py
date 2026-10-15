@@ -28,6 +28,9 @@ _FILLERS = {
 # « cherche la date de noël » soit une recherche et pas la date.
 _SCREEN_FR = r"(le |la |l )?(projecteur|retroprojecteur|retro projecteur|videoprojecteur|grand ecran|ecran du public)"
 _KINDS_FR = r"(fichier|document|pdf|presentation|diaporama|powerpoint|diapo|tableau|excel|classeur|photo|image|video)"
+_NUM_FR = (r"(?P<n>\d+|un|une|premier|premiere|deux|deuxieme|second|seconde|trois|troisieme|quatre|"
+           r"quatrieme|cinq|cinquieme|six|sixieme|sept|septieme|huit|huitieme|dernier|derniere)")
+_NUM_EN = r"(?P<n>\d+|one|first|two|second|three|third|four|fourth|five|fifth|six|sixth|last)"
 _KINDS_EN = r"(file|document|pdf|presentation|slideshow|powerpoint|slides|spreadsheet|excel|workbook|photo|picture|image|video)"
 
 _PATTERNS: dict[str, list[tuple[str, str]]] = {
@@ -52,6 +55,8 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("display_extend", r"^(etends|etendre|ecran etendu)( l ecran| les ecrans)?$"),
         ("display_external", r"^((le )?projecteur seulement|seulement le projecteur|uniquement le projecteur)$"),
         ("display_internal", r"^((l )?ecran du (pc|portable|ordinateur) seulement|deconnecte le projecteur)$"),
+        ("show_report", rf"^(affiche|montre|ouvre|projette)( moi)? (le |la )?(rapport|recherche|dossier de recherche)"
+                        rf"(?P<projector>( sur| au| vers) {_SCREEN_FR})?$"),
         ("project_current", rf"^(envoie|mets|bascule|deplace)( ca| la fenetre| tout ca)? (sur|au|vers) {_SCREEN_FR}$"),
         ("project", rf"^(mets|envoie|affiche|montre|ouvre|lance)( moi)? (?P<target>.+) (sur|au|vers) {_SCREEN_FR}$"),
         ("project", r"^(projette|projeter|diffuse|diffuser)( moi)? (?P<target>.+)$"),
@@ -73,6 +78,18 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         # --- fichiers
         ("open_file", rf"^(ouvre|ouvrir|affiche|montre|cherche|trouve|retrouve)( moi)? "
                       rf"(?P<target>(le |la |l |les |mon |ma |mes |un |une )?{_KINDS_FR}\b.*)$"),
+        # --- météo, actualité, intelligence
+        ("weather", r"^(?P<text>.*\b(quel temps|meteo|pleuvoir|pleut|neiger|temperature exterieure)\b.*)$"),
+        ("news_detail", rf"^(approfondis|developpe|detaille|raconte moi|parle moi de|dis m en plus sur|"
+                        rf"plus de details sur|explique moi|lis moi)( l| la| le)? ?"
+                        rf"(info|titre|article|nouvelle|actualite|sujet)?( numero)? {_NUM_FR}$"),
+        ("news", r"(les infos|les informations|l actualite|l actu|les actus|les nouvelles|les grands titres|"
+                 r"les titres (du jour|de l actualite|de l actu)|flash info|quoi de neuf dans le monde)"),
+        ("research", r"^(fais( moi)?( une)? (recherche|des recherches)( complete| approfondie| detaillee)? sur|"
+                     r"renseigne toi sur|documente toi sur|recherche complete sur|"
+                     r"fais( moi)? un (rapport|dossier|expose) sur|enquete sur) (?P<query>.+)$"),
+        ("followup", r"^(approfondis|developpe|dis m en plus|continue|et ensuite|explique (davantage|plus)|"
+                     r"plus de details|vas y continue|precise|et pourquoi)$"),
         # --- internet et divers
         ("youtube", r"^(mets|joue|lance|cherche|mettre|jouer) (?P<query>.+) sur youtube$"),
         ("search", r"^(cherche|recherche|google|chercher|rechercher)"
@@ -90,6 +107,9 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("lock", r"verrouille"),
         ("screenshot", r"capture (d |l )?ecran"),
         ("photo", r"((prends|prend|prendre|fais) (moi )?une photo|selfie)"),
+        ("ask", r"^(?P<question>(qu est ce que|qu est ce qu|c est quoi|pourquoi|comment|qui (est|etait|a|sont|etaient)|"
+                r"quand|combien|ou (est|se trouve|sont|vit)|quel|quelle|quels|quelles|explique|dis moi|"
+                r"est ce que|est ce qu|raconte moi|parle moi|que penses tu|donne moi) .+)$"),
         ("close", r"^(ferme|quitte|fermer) (?P<target>.+)$"),
         ("open", r"^(ouvre|ouvrir|lance|lancer|demarre|demarrer|va sur|affiche|montre)( moi)? (?P<target>.+)$"),
     ],
@@ -111,6 +131,7 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("display_extend", r"^extend( the)? (screen|screens|display)$"),
         ("display_external", r"^projector only$"),
         ("display_internal", r"^(pc|computer|laptop) screen only$"),
+        ("show_report", r"^(show|open|project)( me)? the (report|research)(?P<projector> on the (projector|big screen))?$"),
         ("project_current", r"^(send|put|move) (it|this|the window) (to|on) the (projector|big screen)$"),
         ("project", r"^(put|send|show|open) (?P<target>.+) on the (projector|big screen)$"),
         ("project", r"^(project|cast) (?P<target>.+)$"),
@@ -123,6 +144,13 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("sheet_previous", r"^previous (sheet|tab)$"),
         ("slide_title", r"^change the (slide )?title to (?P<text>.+)$"),
         ("open_file", rf"^(open|show me|find)( up)? (?P<target>(the |my |a )?{_KINDS_EN}\b.*)$"),
+        ("weather", r"^(?P<text>.*\b(weather|forecast|going to rain|raining|going to snow)\b.*)$"),
+        ("news_detail", rf"^(tell me more about|more about|expand on|explain|read( me)?)( the)? ?"
+                        rf"(story|headline|article|news)?( number)? {_NUM_EN}$"),
+        ("news", r"\b(the news|headlines|news headlines|what s happening in the world)\b"),
+        ("research", r"^(research|do( some)? research on|look into|find out everything about|"
+                     r"write( me)? a report on|investigate) (?P<query>.+)$"),
+        ("followup", r"^(tell me more|go on|go deeper|more details|elaborate|explain more|and why)$"),
         ("youtube", r"^(play|put on|search|search for) (?P<query>.+) on youtube$"),
         ("search", r"^(search|google|look up)( for| the web for| online for)? (?P<query>.+)$"),
         ("note", r"^(take a note|note|write down|remember)( that)? (?P<text>.+)$"),
@@ -137,6 +165,8 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("lock", r"lock (the |my )?(computer|pc|screen|session)"),
         ("screenshot", r"(screenshot|screen shot|capture (the )?screen)"),
         ("photo", r"((take|snap) a (photo|picture|selfie)|selfie)"),
+        ("ask", r"^(?P<question>(what|why|how|who|when|where|which|is|are|does|do|can|could|should|"
+                r"explain|tell me|describe) .+)$"),
         ("close", r"^(close|quit|kill) (?P<target>.+)$"),
         ("open", r"^(open|launch|start|run|go to|show me)( up)? (?P<target>.+)$"),
     ],

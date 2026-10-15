@@ -27,6 +27,15 @@ class Config:
     sites: dict[str, str] = field(default_factory=dict)
     file_folders: list[Path] = field(default_factory=list)
     presenter_view: bool = False
+    city: str | None = None
+    news_feeds: dict[str, list[str]] = field(default_factory=dict)
+    news_count: int = 5
+    use_local: bool = True
+    local_model: str = "qwen2.5:7b"
+    ollama_url: str = "http://localhost:11434"
+    use_claude: bool = True
+    claude_model: str = "claude-opus-5-5"
+    claude_key: str | None = None
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -55,6 +64,19 @@ def load_config(path: Path | None = None) -> Config:
 
         config.file_folders = [f for f in extra if f.exists()] + default_folders()
     config.presenter_view = bool(data.get("projecteur", {}).get("vue_presentateur", False))
+
+    config.city = data.get("meteo", {}).get("ville") or None
+    news = data.get("actualites", {})
+    config.news_count = int(news.get("nombre_de_titres", config.news_count))
+    config.news_feeds = {lang: news[f"flux_{lang}"] for lang in ("fr", "en") if news.get(f"flux_{lang}")}
+
+    ai = data.get("ia", {})
+    config.use_local = bool(ai.get("ia_locale", config.use_local))
+    config.local_model = ai.get("modele_local", config.local_model)
+    config.ollama_url = ai.get("adresse_ollama", config.ollama_url)
+    config.use_claude = bool(ai.get("claude", config.use_claude))
+    config.claude_model = ai.get("modele_claude", config.claude_model)
+    config.claude_key = ai.get("cle_claude") or None
 
     if config.lang not in config.listen_langs:
         config.listen_langs.insert(0, config.lang)

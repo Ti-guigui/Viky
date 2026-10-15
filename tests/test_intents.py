@@ -39,7 +39,7 @@ def test_french(text, name, args):
     ("Open Google Chrome", "open", {"target": "google chrome"}),
     ("Can you please launch the calculator", "open", {"target": "the calculator"}),
     ("Close Spotify", "close", {"target": "spotify"}),
-    ("Search for the weather in Paris", "search", {"query": "the weather in paris"}),
+    ("Search for cheap flights to Rome", "search", {"query": "cheap flights to rome"}),
     ("Play lofi music on YouTube", "youtube", {"query": "lofi music"}),
     ("What time is it?", "time", {}),
     ("What's the date today?", "date", {}),

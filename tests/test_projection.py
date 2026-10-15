@@ -101,7 +101,8 @@ class FakeFiles:
 def make(projector):
     speaker = FakeSpeaker()
     actions = types.SimpleNamespace(clean_target=lambda t: t)
-    viky = Assistant(Config(), speaker, actions, projector, FakeFiles())
+    brain = types.SimpleNamespace(available=False, use_claude=False, history=[])
+    viky = Assistant(Config(), speaker, actions, projector, FakeFiles(), brain=brain)
     return viky, speaker
 
 
@@ -128,7 +129,7 @@ def test_project_without_projector_opens_on_pc():
 def test_file_not_found():
     viky, speaker = make(FakeProjector())
     run(viky, "projette le pdf contrat")
-    assert speaker.said == ["Je n'ai pas trouvé de fichier qui ressemble à le pdf contrat."]
+    assert speaker.said == ["Je n'ai pas trouvé de fichier qui ressemble à contrat."]
 
 
 def test_next_uses_slideshow_or_keys():

@@ -11,13 +11,17 @@ from types import ModuleType
 from typing import Callable, Protocol
 
 from . import actions as default_actions
+from . import news as news_feeds
 from . import projector as default_projector
+from .brain import Brain, BrainUnavailable
 from .config import Config
-from .files import FileIndex, kind_of
+from .files import FileIndex, kind_of, split_kind
 from .intents import Intent, parse_any
 from .messages import date_sentence, say, time_sentence
 from .numbers import parse_cell, parse_number, parse_value
+from .report import save_report
 from .text import normalize, strip_wake_word
+from .weather import Weather
 
 _CURRENT_WORDS = {"ca", "cela", "ceci", "la fenetre", "le fichier", "it", "this", "the window"}
 
@@ -31,12 +35,22 @@ class Assistant:
                  actions: ModuleType = default_actions,
                  projector: ModuleType = default_projector,
                  files: FileIndex | None = None,
+                 brain: Brain | None = None,
+                 weather: Weather | None = None,
+                 news: ModuleType = news_feeds,
                  clock: Callable[[], float] = time.monotonic) -> None:
         self.config = config
         self.speaker = speaker
         self.actions = actions
         self.projector = projector
         self.files = files or FileIndex(config.file_folders or None)
+        self.brain = brain if brain is not None else Brain(
+            config.claude_model, config.claude_key, config.local_model, config.ollama_url,
+            config.use_claude, config.use_local)
+        self.weather = weather or Weather(config.city)
+        self.news = news
+        self.headlines: list = []
+        self.last_report: Path | None = None
         self.clock = clock
         self.lang = config.lang
         self.awake_until = 0.0
@@ -81,11 +95,16 @@ class Assistant:
         order = [self.lang] + [lang for lang in texts if lang != self.lang]
         intent = parse_any(stripped, order)
         if intent is None:
+            question = stripped.get(self.lang, "")
             if heard_wake and not any(stripped.values()):
                 self.wake()
-            elif heard_wake or len(stripped.get(self.lang, "").split()) >= 2:
+            elif len(question.split()) >= 3 and self.brain.available:
+                # Phrase inconnue mais assez longue : on la pose à l'IA.
+                intent = Intent("ask", self.lang, {"question": question})
+            elif heard_wake or len(question.split()) >= 2:
                 self.tell("not_understood")
-            return True
+            if intent is None:
+                return True
 
         keep_running = self.execute(intent)
         self.awake_until = self.clock() + self.config.awake_seconds
@@ -101,6 +120,11 @@ class Assistant:
             return handler(intent.lang, **intent.args) is not False
         except self.projector.NotAvailable:
             self.tell("not_available", intent.lang)
+        except BrainUnavailable:
+            self.tell("no_brain", intent.lang)
+        except OSError:
+            traceback.print_exc()
+            self.tell("offline", intent.lang)
         except Exception:
             traceback.print_exc()
             self.tell("failed", intent.lang)
@@ -213,7 +237,7 @@ class Assistant:
     def _do_open_file(self, lang, target):
         path = self.files.find(target)
         if path is None:
-            self.tell("file_not_found", lang, name=self.actions.clean_target(target))
+            self.tell("file_not_found", lang, name=split_kind(target)[1] or target)
             return
         self._show_file(lang, path, on_projector=False)
 
@@ -222,7 +246,7 @@ class Assistant:
             return self._do_project_current(lang)
         path = self.files.find(target)
         if path is None:
-            self.tell("file_not_found", lang, name=self.actions.clean_target(target))
+            self.tell("file_not_found", lang, name=split_kind(target)[1] or target)
             return
         self._show_file(lang, path, on_projector=True)
 
@@ -330,6 +354,79 @@ class Assistant:
     def _do_slide_title(self, lang, text):
         self.projector.set_slide_title(text[:1].upper() + text[1:])
         self.tell("title_set", lang)
+
+
+    # --- météo et actualité
+
+    def _do_weather(self, lang, text):
+        sentence = self.weather.report(text, lang)
+        if sentence is None:
+            self.tell("place_not_found", lang)
+        else:
+            self.speaker.say(sentence, lang)
+
+    def _do_news(self, lang):
+        feeds = self.config.news_feeds.get(lang) or news_feeds.DEFAULT_FEEDS[lang]
+        self.headlines = self.news.fetch_headlines(feeds, self.config.news_count)
+        if not self.headlines:
+            self.tell("offline", lang)
+            return
+        self.tell("news_intro", lang)
+        for number, headline in enumerate(self.headlines, start=1):
+            self.speaker.say(f"{number}. {headline.title}", lang)
+        self.tell("news_outro", lang)
+
+    def _do_news_detail(self, lang, n):
+        if not self.headlines:
+            self._do_news(lang)
+            return
+        if normalize(n) in ("dernier", "derniere", "last"):
+            index = len(self.headlines)
+        else:
+            index = parse_number(n) or 0
+        if not 1 <= index <= len(self.headlines):
+            self.tell("news_bad_number", lang, count=len(self.headlines))
+            return
+        headline = self.headlines[index - 1]
+        self.speaker.say(headline.title, lang)
+        if not self.brain.available:
+            self.speaker.say(headline.summary or say(lang, "no_brain"), lang)
+            return
+        self.tell("thinking", lang)
+        article = self.news.fetch_article(headline)
+        self.speaker.say(self.brain.explain_article(headline.title, article, lang), lang)
+
+    # --- intelligence
+
+    def _do_ask(self, lang, question):
+        if not self.brain.available:
+            self.tell("no_brain", lang)
+            return
+        self.tell("thinking", lang)
+        self.speaker.say(self.brain.ask(question, lang), lang)
+
+    def _do_followup(self, lang):
+        if not self.brain.history:
+            self.tell("not_understood", lang)
+            return
+        self.tell("thinking", lang)
+        self.speaker.say(self.brain.follow_up(lang), lang)
+
+    def _do_research(self, lang, query):
+        if not self.brain.use_claude:
+            self.tell("no_claude", lang)
+            return
+        self.tell("research_start", lang, query=query)
+        spoken, report = self.brain.research(query, lang)
+        self.last_report = save_report(query, report)
+        self.speaker.say(spoken, lang)
+        self.tell("research_saved", lang)
+
+    def _do_show_report(self, lang, projector=None):
+        if self.last_report is None:
+            self.tell("no_report", lang)
+            return
+        self._show_file(lang, self.last_report, on_projector=bool(projector))
 
 
 def _spoken(value) -> str:

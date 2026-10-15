@@ -17,9 +17,10 @@ MESSAGES: dict[str, dict] = {
         "whoami": "Je suis Viky, votre assistante vocale. Je fonctionne entièrement hors ligne, "
                   "sur votre ordinateur.",
         "help": "Je peux ouvrir vos fichiers, présentations et tableaux, les afficher sur le projecteur, "
-                "faire défiler les diapos et modifier Excel à la voix. Je peux aussi ouvrir des "
-                "applications et des sites, chercher sur internet, donner l'heure, régler le volume, "
-                "prendre des photos et des notes, et raconter des blagues.",
+                "faire défiler les diapos et modifier Excel à la voix. Je donne la météo et les "
+                "grands titres, je réponds à vos questions et je fais des recherches complètes. "
+                "Je peux aussi ouvrir des applications et des sites, donner l'heure, régler le "
+                "volume, prendre des photos et des notes, et raconter des blagues.",
         "opening": "J'ouvre {name}.",
         "open_failed": "Je n'ai pas trouvé {name}.",
         "closing": "Je ferme {name}.",
@@ -48,6 +49,19 @@ MESSAGES: dict[str, dict] = {
         "bad_cell": "Je n'ai pas compris le nom de la cellule. Dites par exemple : cellule B3.",
         "saved": "C'est enregistré.",
         "title_set": "Titre modifié.",
+        "thinking": ["Je réfléchis.", "Laissez-moi réfléchir.", "Une seconde."],
+        "no_brain": "Mon intelligence artificielle n'est pas configurée. Installez Ollama ou "
+                    "ajoutez une clé Claude dans le fichier de configuration.",
+        "no_claude": "Pour les recherches complètes, il me faut une clé Claude dans le fichier de configuration.",
+        "offline": "Je n'arrive pas à joindre internet pour le moment.",
+        "place_not_found": "Je ne trouve pas cet endroit.",
+        "news_intro": "Voici les grands titres.",
+        "news_outro": "Dites par exemple « approfondis le numéro deux » pour en savoir plus.",
+        "news_bad_number": "Je n'ai que {count} titres. Choisissez un numéro entre 1 et {count}.",
+        "research_start": "Je lance une recherche complète sur {query}. Cela peut prendre une minute.",
+        "research_saved": "Le rapport détaillé est enregistré. Dites « affiche le rapport » pour le voir, "
+                          "ou « projette le rapport » pour le montrer au public.",
+        "no_report": "Je n'ai pas encore fait de recherche.",
         "jokes": [
             "Pourquoi les plongeurs plongent-ils toujours en arrière ? "
             "Parce que sinon, ils tombent dans le bateau.",
@@ -69,8 +83,9 @@ MESSAGES: dict[str, dict] = {
         "greet": ["Hello!", "Hi! What can I do for you?"],
         "whoami": "I'm Viky, your voice assistant. I run entirely offline, on your computer.",
         "help": "I can open your files, slides and spreadsheets, show them on the projector, "
-                "move through slides and edit Excel by voice. I can also open apps and websites, "
-                "search the web, tell the time, change the volume, take photos and notes, and tell jokes.",
+                "move through slides and edit Excel by voice. I give the weather and the headlines, "
+                "answer your questions and do full research. I can also open apps and websites, "
+                "tell the time, change the volume, take photos and notes, and tell jokes.",
         "opening": "Opening {name}.",
         "open_failed": "I couldn't find {name}.",
         "closing": "Closing {name}.",
@@ -99,6 +114,19 @@ MESSAGES: dict[str, dict] = {
         "bad_cell": "I didn't get the cell name. Say for example: cell B3.",
         "saved": "Saved.",
         "title_set": "Title changed.",
+        "thinking": ["Let me think.", "One second.", "Thinking."],
+        "no_brain": "My artificial intelligence isn't set up. Install Ollama or add a Claude key "
+                    "to the configuration file.",
+        "no_claude": "For full research I need a Claude key in the configuration file.",
+        "offline": "I can't reach the internet right now.",
+        "place_not_found": "I can't find that place.",
+        "news_intro": "Here are the headlines.",
+        "news_outro": "Say for example \"tell me more about number two\" to hear more.",
+        "news_bad_number": "I only have {count} headlines. Pick a number between 1 and {count}.",
+        "research_start": "Starting full research on {query}. This can take a minute.",
+        "research_saved": "The detailed report is saved. Say \"show the report\" to see it, "
+                          "or \"show the report on the projector\" for the audience.",
+        "no_report": "I haven't done any research yet.",
         "jokes": [
             "Why do programmers prefer dark mode? Because light attracts bugs.",
             "Why was the computer cold? It left its Windows open.",
