@@ -224,14 +224,33 @@ def slideshow_end() -> None:
 
 
 def set_slide_title(text: str) -> None:
-    app = _com("PowerPoint.Application")
-    try:
-        slide = _show_view().Slide
-    except NotAvailable:
-        slide = app.ActiveWindow.View.Slide
+    slide = _current_slide()
     if not slide.Shapes.HasTitle:
         raise NotAvailable
     slide.Shapes.Title.TextFrame.TextRange.Text = text
+
+
+def _current_slide():
+    app = _com("PowerPoint.Application")
+    try:
+        return _show_view().Slide
+    except NotAvailable:
+        return app.ActiveWindow.View.Slide
+
+
+def replace_in_slide(old: str, new: str) -> int:
+    """Corrige un mot ou une expression sur la diapo affichée. Renvoie le nombre de corrections."""
+    from .text import find_spans
+
+    count = 0
+    for shape in _current_slide().Shapes:
+        if not (shape.HasTextFrame and shape.TextFrame.HasText):
+            continue
+        text_range = shape.TextFrame.TextRange
+        for start, length in reversed(find_spans(text_range.Text, old)):
+            text_range.Characters(start + 1, length).Text = new
+            count += 1
+    return count
 
 
 def _excel():

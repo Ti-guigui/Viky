@@ -49,6 +49,8 @@ MESSAGES: dict[str, dict] = {
         "bad_cell": "Je n'ai pas compris le nom de la cellule. Dites par exemple : cellule B3.",
         "saved": "C'est enregistré.",
         "title_set": "Titre modifié.",
+        "replaced": "C'est corrigé : {new} à la place de {old}.",
+        "text_not_found": "Je ne trouve pas « {old} » sur cette diapo.",
         "thinking": ["Je réfléchis.", "Laissez-moi réfléchir.", "Une seconde."],
         "no_brain": "Mon intelligence artificielle n'est pas configurée. Installez Ollama ou "
                     "ajoutez une clé Claude dans le fichier de configuration.",
@@ -118,6 +120,8 @@ MESSAGES: dict[str, dict] = {
         "bad_cell": "I didn't get the cell name. Say for example: cell B3.",
         "saved": "Saved.",
         "title_set": "Title changed.",
+        "replaced": "Fixed: {new} instead of {old}.",
+        "text_not_found": "I can't find \"{old}\" on this slide.",
         "thinking": ["Let me think.", "One second.", "Thinking."],
         "no_brain": "My artificial intelligence isn't set up. Install Ollama or add a Claude key "
                     "to the configuration file.",

@@ -15,7 +15,7 @@ from viky.weather import Place, describe, parse_request
 
 @pytest.mark.parametrize("text, name, args", [
     ("Quel temps fait-il ?", "weather", {"text": "quel temps fait il"}),
-    ("Quelle est la météo à Lyon demain ?", "weather", {"text": "quelle est la meteo a lyon demain"}),
+    ("Quelle est la météo à Lyon demain ?", "weather", {"text": "quelle est la météo à lyon demain"}),
     ("Est-ce qu'il va pleuvoir ?", "weather", {"text": "est ce qu il va pleuvoir"}),
     ("Donne-moi les grands titres", "news", {}),
     ("Quelles sont les infos ?", "news", {}),
@@ -27,7 +27,7 @@ from viky.weather import Place, describe, parse_request
     ("Approfondis", "followup", {}),
     ("Pourquoi le ciel est bleu ?", "ask", {"question": "pourquoi le ciel est bleu"}),
     ("C'est quoi un trou noir ?", "ask", {"question": "c est quoi un trou noir"}),
-    ("Qui était Houdini ?", "ask", {"question": "qui etait houdini"}),
+    ("Qui était Houdini ?", "ask", {"question": "qui était houdini"}),
     ("Affiche le rapport", "show_report", {}),
     ("Projette le rapport sur le projecteur", "show_report", {"projector": "sur le projecteur"}),
 ])
@@ -246,7 +246,7 @@ def test_weather_flow():
     weather = types.SimpleNamespace(report=lambda text, lang: f"Météo pour « {text} ».")
     viky, speaker = make_viky(FakeBrain(), weather=weather)
     viky.on_utterance({"fr": "quel temps fait-il à Lyon ?"}, require_wake=False)
-    assert speaker.said == ["Météo pour « quel temps fait il a lyon »."]
+    assert speaker.said == ["Météo pour « quel temps fait il à lyon »."]
 
 
 def test_internet_down_is_explained():

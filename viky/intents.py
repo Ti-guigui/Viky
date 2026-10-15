@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-from .text import normalize
+from .text import fold_pairs, normalize, squash
 
 
 @dataclass
@@ -84,6 +84,8 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("slide_title", r"^(change|modifie|remplace) le titre( de (la|cette) (diapo|diapositive|slide|page))? "
                         r"(en|par) (?P<text>.+)$"),
         ("slide_title", r"^(mets|ecris) (?P<text>.+) (comme|en) titre$"),
+        ("slide_replace", r"^(remplace|corrige|change|modifie) (le mot |la faute )?(?P<old>.+?) (par|en) (?P<new>.+?)"
+                          r"( (sur|dans) (la|cette) (diapo|diapositive|slide|page))?$"),
         # --- fichiers
         ("open_file", rf"^(ouvre|ouvrir|affiche|montre|cherche|trouve|retrouve)( moi)? "
                       rf"(?P<target>(le |la |l |les |mon |ma |mes |un |une )?{_KINDS_FR}\b.*)$"),
@@ -158,6 +160,7 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("sheet_next", r"^next (sheet|tab)$"),
         ("sheet_previous", r"^previous (sheet|tab)$"),
         ("slide_title", r"^change the (slide )?title to (?P<text>.+)$"),
+        ("slide_replace", r"^(replace|correct|change) (the word )?(?P<old>.+?) (with|to|by) (?P<new>.+?)( on (the|this) slide)?$"),
         ("open_file", rf"^(open|show me|find)( up)? (?P<target>(the |my |a )?{_KINDS_EN}\b.*)$"),
         ("weather", r"^(?P<text>.*\b(weather|forecast|going to rain|raining|going to snow)\b.*)$"),
         ("news_detail", rf"^(tell me more about|more about|expand on|explain|read( me)?)( the)? ?"
@@ -195,20 +198,29 @@ _COMPILED = {
 LANGS = tuple(_PATTERNS)
 
 
-def clean(text: str, lang: str) -> str:
-    text = re.sub(_FILLERS[lang], " ", normalize(text))
-    return re.sub(r"\s+", " ", text).strip()
+def clean(text: str, lang: str) -> tuple[str, str]:
+    """Retire les formules de politesse. Renvoie (texte sans accents, texte avec accents)."""
+    pairs = fold_pairs(text)
+    folded = "".join(b for b, _ in pairs)
+    removed = {i for m in re.finditer(_FILLERS[lang], folded) for i in range(*m.span())}
+    pairs = squash([p for i, p in enumerate(pairs) if i not in removed])
+    return "".join(b for b, _ in pairs), "".join(c for _, c in pairs)
 
 
 def parse(text: str, lang: str) -> Intent | None:
-    """Reconnaît une commande dans une langue donnée."""
-    text = clean(text, lang)
-    if not text:
+    """Reconnaît une commande dans une langue donnée.
+
+    La règle est cherchée dans le texte sans accents, mais les paramètres
+    (texte à écrire, question…) sont recopiés avec leurs accents.
+    """
+    folded, display = clean(text, lang)
+    if not folded:
         return None
     for name, regex in _COMPILED[lang]:
-        match = regex.search(text)
+        match = regex.search(folded)
         if match:
-            args = {k: v.strip() for k, v in match.groupdict().items() if v}
+            args = {k: display[match.start(k):match.end(k)].strip()
+                    for k, v in match.groupdict().items() if v}
             return Intent(name, lang, args)
     return None
 

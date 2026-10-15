@@ -9,7 +9,7 @@ from viky.intents import parse
 
 
 @pytest.mark.parametrize("text, name, args", [
-    ("Projette la présentation mariage", "project", {"target": "la presentation mariage"}),
+    ("Projette la présentation mariage", "project", {"target": "la présentation mariage"}),
     ("Mets le PDF contrat sur le projecteur", "project", {"target": "le pdf contrat"}),
     ("Envoie ça sur le grand écran", "project_current", {}),
     ("Ouvre le tableau budget", "open_file", {"target": "le tableau budget"}),
@@ -24,11 +24,11 @@ from viky.intents import parse
     ("Mets en plein écran", "fullscreen", {}),
     ("Duplique l'écran", "display_clone", {}),
     ("Mets 500 dans la cellule B3", "cell_set", {"value": "500", "cell": "b3"}),
-    ("Écris payé dans la case C 12", "cell_set", {"value": "paye", "cell": "c 12"}),
+    ("Écris payé dans la case C 12", "cell_set", {"value": "payé", "cell": "c 12"}),
     ("La cellule B trois vaut douze", "cell_set", {"cell": "b trois", "value": "douze"}),
     ("Lis la cellule A1", "cell_get", {"cell": "a1"}),
     ("Enregistre", "save", {}),
-    ("Change le titre de la diapo en Bienvenue à tous", "slide_title", {"text": "bienvenue a tous"}),
+    ("Change le titre de la diapo en Bienvenue à tous", "slide_title", {"text": "bienvenue à tous"}),
     ("Ferme le fichier", "close_current", {}),
     ("Ouvre mes documents", "open", {"target": "mes documents"}),
 ])
@@ -158,3 +158,33 @@ def test_unavailable_is_explained():
     viky, speaker = make(FakeProjector())
     run(viky, "lis la cellule b3")
     assert speaker.said[-1].startswith("Ce n'est pas possible pour le moment")
+
+
+def test_find_spans():
+    from viky.text import find_spans
+
+    text = "C'est l'Été à Paris, l'été 2026. Étéphant."
+    assert find_spans(text, "ete") == [(8, 3), (23, 3)]
+    assert find_spans(text, "c est") == [(0, 5)]
+    assert find_spans(text, "paris") == [(14, 5)]
+    assert find_spans(text, "londres") == []
+
+
+@pytest.mark.parametrize("text, args", [
+    ("Remplace ete par été", {"old": "ete", "new": "été"}),
+    ("Corrige la faute bonjoure en bonjour sur la diapo", {"old": "bonjoure", "new": "bonjour"}),
+    ("Change 2025 par 2026", {"old": "2025", "new": "2026"}),
+])
+def test_slide_replace_intent(text, args):
+    intent = parse(text, "fr")
+    assert (intent.name, intent.args) == ("slide_replace", args)
+
+
+def test_slide_replace_flow():
+    proj = FakeProjector()
+    proj.replace_in_slide = lambda old, new: 2 if old == "ete" else 0
+    viky, speaker = make(proj)
+    run(viky, "remplace ete par été")
+    run(viky, "remplace hiver par automne")
+    assert speaker.said == ["C'est corrigé : été à la place de ete.",
+                            "Je ne trouve pas « hiver » sur cette diapo."]

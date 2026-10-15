@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import re
 
+from .text import normalize
+
 _FR = {
     "zero": 0, "un": 1, "une": 1, "premier": 1, "premiere": 1, "deux": 2, "deuxieme": 2,
     "second": 2, "seconde": 2, "trois": 3, "troisieme": 3, "quatre": 4, "quatrieme": 4,
@@ -28,13 +30,15 @@ _IGNORED = {"et", "and", "numero", "number", "la", "le", "l", "n"}
 
 def parse_number(text: str) -> int | None:
     """Convertit « 12 », « douze », « quatre vingt dix sept » ou « troisième » en entier."""
-    words = [w for w in re.split(r"[\s-]+", text.strip().lower()) if w and w not in _IGNORED]
+    words = [w for w in normalize(text).split() if w not in _IGNORED]
     if not words:
         return None
     if len(words) == 1:
         match = re.fullmatch(r"(\d+)(e|eme|er|ere|st|nd|rd|th)?", words[0])
         if match:
             return int(match.group(1))
+    if len(words) > 1 and any(w.isdigit() for w in words):
+        return None  # « 12 5 » est ambigu (12,5 ? 125 ?)
     total, current, previous = 0, 0, None
     for word in words:
         if word.isdigit():
@@ -60,6 +64,9 @@ def parse_number(text: str) -> int | None:
 def parse_value(text: str) -> float | int | str:
     """Valeur à écrire dans Excel : un nombre si c'en est un, sinon le texte tel quel."""
     text = text.strip()
+    if re.fullmatch(r"-?\d+([.,]\d+)?", text):
+        number = float(text.replace(",", "."))
+        return int(number) if number.is_integer() and "," not in text and "." not in text else number
     negative = False
     words = text.split()
     if words and words[0] in ("moins", "minus"):
@@ -98,7 +105,7 @@ _LETTERS = {
 
 def parse_cell(text: str) -> str | None:
     """« b3 », « b 3 », « bé trois », « a a douze » -> « B3 », « B3 », « B3 », « AA12 »."""
-    text = text.strip().lower()
+    text = normalize(text)
     compact = text.replace(" ", "")
     match = re.fullmatch(r"([a-z]{1,3})(\d+)", compact)
     if match:

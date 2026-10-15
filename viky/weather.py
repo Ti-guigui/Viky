@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from urllib.parse import quote
 
+from .text import normalize
 from .web import get_json
 
 # Codes météo WMO -> description
@@ -38,6 +39,7 @@ class Place:
 
 def parse_request(text: str, lang: str) -> tuple[str | None, int]:
     """« quel temps fera-t-il à lyon demain » -> (« lyon », 1)."""
+    text = normalize(text)
     day = 0
     for words, offset in sorted(_DAY_WORDS.items(), key=lambda item: -len(item[0])):
         if re.search(rf"\b{words}\b", text):

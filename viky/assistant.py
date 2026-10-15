@@ -21,7 +21,7 @@ from .magic import STAGE_PERSONA, SUSPENSE, MagicShow, parse_card
 from .messages import date_sentence, say, time_sentence
 from .numbers import parse_cell, parse_number, parse_value
 from .report import save_report
-from .text import normalize, strip_wake_word
+from .text import normalize, strip_wake_word, tidy
 from .weather import Weather
 
 _CURRENT_WORDS = {"ca", "cela", "ceci", "la fenetre", "le fichier", "it", "this", "the window"}
@@ -98,7 +98,7 @@ class Assistant:
         heard_wake = False
         stripped: dict[str, str] = {}
         for lang, text in texts.items():
-            found, rest = strip_wake_word(normalize(text), self.config.wake_words)
+            found, rest = strip_wake_word(tidy(text), self.config.wake_words)
             heard_wake = heard_wake or found
             stripped[lang] = rest
 
@@ -368,6 +368,13 @@ class Assistant:
 
     def _do_sheet_previous(self, lang):
         self.speaker.say(self.projector.excel_sheet(-1), lang)
+
+    def _do_slide_replace(self, lang, old, new):
+        count = self.projector.replace_in_slide(old, new)
+        if count:
+            self.tell("replaced", lang, old=old, new=new)
+        else:
+            self.tell("text_not_found", lang, old=old)
 
     def _do_slide_title(self, lang, text):
         self.projector.set_slide_title(text[:1].upper() + text[1:])
