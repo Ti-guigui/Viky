@@ -11,6 +11,11 @@ double_clap = true               # se réveiller en tapant deux fois dans les ma
 sensibilite_clap = 0.5           # de 0 (peu sensible) à 1 (très sensible)
 vitesse_voix = 180               # vitesse de parole
 
+[interface]
+# "widget" = petit réacteur dans un coin (double-clic pour le HUD), "hud" = grand écran Jarvis,
+# "aucune" = pas de fenêtre. À la voix : « Viky, mode Jarvis » / « Viky, mode discret ».
+mode = "widget"
+
 [reconnaissance]
 # "whisper" = très précis (recommandé), "vosk" = léger mais moins précis
 moteur = "whisper"

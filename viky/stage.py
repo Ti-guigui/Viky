@@ -10,8 +10,6 @@ propre fil et reçoit ses ordres par une file d'attente.
 
 from __future__ import annotations
 
-import queue
-import threading
 from typing import Callable
 
 from .magic import Card
@@ -37,12 +35,12 @@ def _rounded_rect(canvas, x1, y1, x2, y2, radius, **kwargs):
 
 
 class Stage:
-    def __init__(self, screen_rect: Callable[[], tuple[int, int, int, int] | None]) -> None:
+    def __init__(self, screen_rect: Callable[[], tuple[int, int, int, int] | None], loop=None) -> None:
         """`screen_rect` renvoie la zone du projecteur (gauche, haut, droite, bas) ou None."""
         self.screen_rect = screen_rect
-        self.commands: queue.Queue = queue.Queue()
+        self.loop = loop
         self.visible = False
-        self._thread: threading.Thread | None = None
+        self.root = None
 
     # ------------------------------------------------------------ ordres (tous fils)
 
@@ -58,42 +56,28 @@ class Stage:
     def hide(self) -> None:
         self._send("hide")
 
-    def _send(self, *command) -> None:
-        if self._thread is None or not self._thread.is_alive():
-            self._thread = threading.Thread(target=self._run, daemon=True, name="scene")
-            self._thread.start()
-        self.commands.put(command)
+    def _send(self, command: str, *args) -> None:
+        if self.loop is None:
+            from .tkloop import shared_loop
 
-    # ------------------------------------------------------------ fil de la fenêtre
+            self.loop = shared_loop()
+        self.loop.call(self._dispatch, command, args)
 
-    def _run(self) -> None:
-        try:
-            import tkinter as tk
+    # ------------------------------------------------------------ fil graphique
 
-            self.root = tk.Tk()
-        except Exception as error:  # pas d'écran ou tkinter non installé
-            print(f"[Viky] Écran de scène indisponible ({error}). Réinstallez Python en cochant "
-                  "« tcl/tk and IDLE ».")
-            return
-        self.tk = tk
-        self.root.title("Viky — scène")
-        self.root.configure(bg=BACKGROUND)
-        self.root.withdraw()
-        self.canvas = tk.Canvas(self.root, bg=BACKGROUND, highlightthickness=0)
-        self.canvas.pack(fill="both", expand=True)
-        self.root.bind("<Escape>", lambda event: self._hide())
-        self._animation = 0
-        self._poll()
-        self.root.mainloop()
-
-    def _poll(self) -> None:
-        try:
-            while True:
-                command, *args = self.commands.get_nowait()
-                getattr(self, f"_{command}")(*args)
-        except queue.Empty:
-            pass
-        self.root.after(40, self._poll)
+    def _dispatch(self, command: str, args: tuple) -> None:
+        if self.root is None:
+            tk = self.loop.tk
+            self.tk = tk
+            self.root = tk.Toplevel(self.loop.root)
+            self.root.title("Viky — scène")
+            self.root.configure(bg=BACKGROUND)
+            self.root.withdraw()
+            self.canvas = tk.Canvas(self.root, bg=BACKGROUND, highlightthickness=0)
+            self.canvas.pack(fill="both", expand=True)
+            self.root.bind("<Escape>", lambda event: self._hide())
+            self._animation = 0
+        getattr(self, f"_{command}")(*args)
 
     def _show(self) -> tuple[int, int]:
         rect = self.screen_rect()

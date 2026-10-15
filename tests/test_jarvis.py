@@ -179,3 +179,30 @@ def test_reminder_flow(viky):
     assert speaker.said[-1] == "Minuteur de 1 heure et 30 minutes lancé."
     say(assistant, "rappelle-moi d'acheter du pain")
     assert speaker.said[-1].startswith("Pour quand ?")
+
+
+@pytest.mark.parametrize("text, name", [
+    ("Mode Jarvis", "ui_hud"), ("Affiche l'interface", "ui_hud"), ("Mode discret", "ui_widget"),
+])
+def test_interface_intents(text, name):
+    assert parse(text, "fr").name == name
+
+
+def test_interface_events(viky):
+    assistant, speaker, _ = viky
+    events = []
+    assistant.listeners.append(lambda event, value: events.append((event, value)))
+    say(assistant, "mode jarvis")
+    say(assistant, "mode spectacle")
+    assert ("heard", "mode jarvis") in events
+    assert ("show_hud", None) in events
+    assert ("stage", True) in events
+    assert ("reply", "Mode spectacle activé. Que la magie commence.") in events
+
+
+def test_hud_data(viky):
+    assistant, _, _ = viky
+    assistant.reminders.add(4102444800, "appeler Paul")  # en 2100
+    info = assistant.hud_data(slow=False)
+    assert info["reminders"] == ["le 1/1 à 0 h — appeler Paul"]
+    assert info["status"]["battery"] == 82

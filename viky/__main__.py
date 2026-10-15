@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import queue
 import sys
+import threading
 from pathlib import Path
 
 from .assistant import Assistant
@@ -67,17 +68,47 @@ def run_voice(assistant: Assistant) -> None:
             if claps and claps.feed(samples, elapsed):
                 assistant.wake()
             else:
+                was_listening = segmenter.active
                 segment = segmenter.feed(block, samples)
                 if segment is None:
+                    if segmenter.active != was_listening:
+                        assistant.emit("state", "listening" if segmenter.active else "idle")
                     continue
+                assistant.emit("state", "thinking")
                 heard = recognizer.transcribe(segment)
                 if any(heard.values()):
                     print("Entendu :", " | ".join(f"{k}: {v}" for k, v in heard.items() if v))
                 if not assistant.on_utterance(heard):
                     return
+                assistant.emit("state", "idle")
             # Oublie ce que le micro a capté pendant que Viky parlait.
             _drain(blocks)
             segmenter.reset()
+
+
+def start_interface(assistant: Assistant) -> None:
+    """Ouvre le widget ou le HUD façon Jarvis."""
+    import os
+
+    from .tkloop import shared_loop
+    from .ui import JarvisUI
+
+    loop = shared_loop()
+    if loop.failed:
+        return
+    langs = assistant.config.listen_langs
+
+    def submit(text: str) -> None:
+        if not assistant.on_utterance({lang: text for lang in langs}, require_wake=False):
+            os._exit(0)
+
+    def quit_viky() -> None:
+        threading.Thread(target=lambda: (assistant.tell("bye"), os._exit(0)), daemon=True).start()
+
+    ui = JarvisUI(loop, submit, assistant.hud_data, assistant.config.interface, quit_viky)
+    ui.stage_mode = assistant.magic.stage_mode
+    assistant.listeners.append(ui.on_event)
+    assistant.speaker.on_state = lambda state: assistant.emit("state", state)
 
 
 def start_remote(assistant: Assistant) -> None:
@@ -97,6 +128,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="viky", description="Viky, assistante vocale hors ligne.")
     parser.add_argument("--texte", action="store_true", help="taper les commandes au clavier au lieu de parler")
     parser.add_argument("--muet", action="store_true", help="afficher les réponses sans les prononcer")
+    parser.add_argument("--sans-interface", action="store_true", help="ne pas ouvrir le widget ni le HUD")
+    parser.add_argument("--hud", action="store_true", help="ouvrir directement le grand HUD")
     parser.add_argument("--langue", choices=["fr", "en"], help="langue de réponse par défaut")
     parser.add_argument("--config", type=Path, help="chemin d'un autre fichier config.toml")
     parser.add_argument("--telecharger-modeles", action="store_true",
@@ -123,6 +156,10 @@ def main() -> None:
                       piper_speed=config.voice_speed)
     assistant = Assistant(config, speaker)
     assistant.reminders.start()
+    if args.hud:
+        config.interface = "hud"
+    if not args.sans_interface and config.interface != "aucune":
+        start_interface(assistant)
     if config.remote:
         start_remote(assistant)
     try:

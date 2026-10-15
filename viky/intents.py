@@ -40,6 +40,10 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("greet", r"^(bonjour|salut|coucou|bonsoir|hello)$"),
         ("lang_en", r"^(parle|passe|reponds)( moi)? en anglais$"),
         ("lang_fr", r"^(parle|passe|reponds)( moi)? en francais$"),
+        # --- interface
+        ("ui_hud", r"^(mode jarvis|affiche l interface|ouvre l interface|ouvre le hud|affiche le hud|"
+                   r"montre toi|affiche toi)$"),
+        ("ui_widget", r"^(mode discret|reduis l interface|cache l interface|ferme l interface|cache toi)$"),
         # --- mémoire et conversation
         ("set_name", r"^(appelle moi|mon prenom est|mon nom est|je m appelle) (?P<name>.+)$"),
         ("remember", r"^(souviens toi|rappelle toi|retiens bien|retiens|memorise|n oublie pas)( que| de| d)? (?P<fact>.+)$"),
@@ -166,6 +170,8 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("greet", r"^(hello|hi|hey|good (morning|evening|afternoon))$"),
         ("lang_fr", r"^(speak|switch to|answer in|talk in) french$"),
         ("lang_en", r"^(speak|switch to|answer in|talk in) english$"),
+        ("ui_hud", r"^(jarvis mode|show (the )?interface|open the hud|show yourself)$"),
+        ("ui_widget", r"^(discreet mode|hide (the )?interface|hide yourself)$"),
         ("set_name", r"^(call me|my name is|i am called) (?P<name>.+)$"),
         ("remember", r"^(remember|don t forget|memorize)( that)? (?P<fact>.+)$"),
         ("recall", r"(what do you know about me|what do you remember)"),

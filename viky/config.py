@@ -53,6 +53,7 @@ class Config:
     piper_voices: dict[str, str] = field(default_factory=lambda: {
         "fr": "fr_FR-siwis-medium", "en": "en_US-amy-medium"})
     voice_speed: float = 1.0
+    interface: str = "widget"
     recognizer: str = "whisper"
     whisper_size: str = "small"
     whisper_device: str = "auto"
@@ -97,6 +98,8 @@ def load_config(path: Path | None = None) -> Config:
     config.use_claude = bool(ai.get("claude", config.use_claude))
     config.claude_model = ai.get("modele_claude", config.claude_model)
     config.claude_key = ai.get("cle_claude") or None
+
+    config.interface = data.get("interface", {}).get("mode", config.interface)
 
     listening = data.get("reconnaissance", {})
     config.recognizer = listening.get("moteur", config.recognizer)

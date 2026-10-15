@@ -56,6 +56,33 @@ Branchez le projecteur en **HDMI**, en mode **écran étendu** (touche Windows +
 | « Fais-moi une recherche complète sur les illusionnistes » | Recherche sur le web, résumé oral et rapport détaillé |
 | « Affiche le rapport », « Projette le rapport » | Ouvre le rapport, sur le PC ou sur le projecteur |
 
+### Façon Jarvis
+
+| Vous dites | Viky fait |
+|---|---|
+| « Remplace ete par été », « Corrige bonjoure en bonjour » | Corrige la faute sur la diapo affichée |
+| « Mode Jarvis » / « Mode discret » | Ouvre le grand HUD / revient au petit widget |
+| « Fais-moi le point » | Briefing : date, météo, rappels du jour, grands titres |
+| « Rappelle-moi d'appeler Paul à dix-huit heures trente » | Rappel (il survit à un redémarrage) |
+| « Rappelle-moi dans 10 minutes de sortir le gâteau », « Minuteur de 5 minutes » | Rappel ou minuteur |
+| « Quels sont mes rappels ? », « Supprime mes rappels » | Liste ou efface les rappels |
+| « Appelle-moi Guillaume », « Souviens-toi que j'aime le jazz » | Viky retient votre prénom et vos préférences, et l'IA en tient compte |
+| « Qu'est-ce que tu sais sur moi ? », « Oublie tout » | Mémoire |
+| « État du PC », « Niveau de batterie », « Quel réseau Wi-Fi ? » | Batterie, processeur, mémoire, Wi-Fi |
+| « Monte la luminosité », « Mets la luminosité à 50 » | Luminosité de l'écran |
+| « Pause », « Chanson suivante », « Chanson précédente » | Musique (Spotify, YouTube…) |
+| « Affiche le bureau », « Change de fenêtre », « Agrandis », « Réduis » | Fenêtres |
+| « Éteins l'ordinateur », « Redémarre le PC », « Mets le PC en veille » | Demande confirmation (« confirme »), puis exécute ; « annule » arrête un arrêt en cours |
+
+### L'interface
+
+Viky s'affiche dans une vraie fenêtre Windows, pas dans un navigateur :
+
+- le **widget**, un petit réacteur animé dans un coin de l'écran, au-dessus des autres fenêtres. Glissez-le pour le déplacer, double-cliquez pour ouvrir le HUD, clic droit pour le menu ;
+- le **HUD**, en plein écran : réacteur au centre, heure, météo, rappels, actualités, état du PC, conversation, et une zone pour taper une commande. Échap revient au widget.
+
+Le réacteur change de couleur selon l'état de Viky : bleu au repos, bleu vif à l'écoute, ambre quand elle réfléchit, pulsation quand elle parle, violet en mode spectacle.
+
 ### Et aussi
 
 Ouvrir des applications et des sites (« Ouvre Chrome », « Va sur YouTube »), chercher sur Google ou YouTube, l'heure et la date, le volume, une photo ou une capture d'écran, des notes (« Note que… »), verrouiller le PC, des blagues, et changer de langue (« Parle en anglais »).
@@ -129,7 +156,7 @@ Testez chaque phrase en répétition : la fenêtre affiche ce que Viky a compris
 
 **Lancer Viky à chaque démarrage de Windows** : double-cliquez sur **`demarrage_auto.bat`**. Viky démarre alors toute seule, en fenêtre réduite. Pour annuler : `retirer_demarrage_auto.bat`.
 
-**Voix française** : si Viky a un accent anglais, allez dans **Paramètres → Heure et langue → Voix → Ajouter des voix → Français**.
+**Voix et reconnaissance** : l'installateur télécharge la voix naturelle **Piper** et la reconnaissance vocale **Whisper**. Avec une carte NVIDIA (comme la RTX de l'ASUS TUF A17), il installe aussi l'accélération graphique : Whisper répond alors en une fraction de seconde. Sans carte NVIDIA, tout fonctionne sur le processeur, un peu plus lentement. En cas de souci, `config.toml` permet de revenir à Vosk et à la voix de Windows.
 
 ### L'intelligence artificielle (optionnel, mais recommandé)
 
@@ -169,7 +196,10 @@ Ouvrez `config.toml` avec le Bloc-notes. Vous pouvez y régler :
 
 | Fichier | Rôle |
 |---|---|
-| `viky/audio.py`, `recognizer.py` | Micro, découpage des phrases, double clap, reconnaissance vocale [Vosk](https://alphacephei.com/vosk/) |
+| `viky/audio.py`, `recognizer.py` | Micro, découpage des phrases, double clap, reconnaissance vocale (Whisper, ou [Vosk](https://alphacephei.com/vosk/) en secours) |
+| `viky/ui.py`, `tkloop.py` | Interface Jarvis : widget et HUD |
+| `viky/system.py` | Contrôle du PC |
+| `viky/reminders.py`, `memory.py` | Rappels, minuteurs et mémoire |
 | `viky/intents.py` | Comprend les commandes (français et anglais) |
 | `viky/assistant.py` | Le cerveau : réveil, commandes, mode spectacle |
 | `viky/files.py` | Retrouve un fichier à partir de son nom prononcé |
@@ -177,17 +207,16 @@ Ouvrez `config.toml` avec le Bloc-notes. Vous pouvez y régler :
 | `viky/weather.py`, `news.py` | Météo (Open-Meteo) et actualités (RSS) |
 | `viky/brain.py`, `report.py` | IA locale (Ollama), Claude, rapports de recherche |
 | `viky/magic.py`, `stage.py`, `remote.py` | Secrets, mots-codes, écran de révélation, télécommande |
-| `viky/speaker.py`, `messages.py` | Voix de Viky et toutes ses phrases |
+| `viky/speaker.py`, `messages.py` | Voix de Viky (Piper ou Windows) et toutes ses phrases |
 
 Tests : `pip install -r requirements-dev.txt` puis `python -m pytest`.
 
 ## Feuille de route
 
-- [ ] Rappels et minuteur
-- [ ] Envoyer un fichier par e-mail à la voix
+- [ ] E-mails : lire et envoyer à la voix, envoyer un fichier
+- [ ] Agenda (Outlook ou Google)
 - [ ] Modifications Excel/PowerPoint plus libres grâce à l'IA (« ajoute une ligne total »)
 - [ ] Plus d'effets de révélation (nombre, dessin, prédiction cachée dans un fichier)
-- [ ] Icône dans la barre des tâches et démarrage avec Windows
 - [ ] Exécutable Windows `.exe` sans installation de Python
 - [ ] Prise en charge complète de Linux et macOS
 

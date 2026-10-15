@@ -130,6 +130,7 @@ class Assistant:
 
         if require_wake and not heard_wake and not self.is_awake():
             return True
+        self.emit("heard", next((t for t in (texts.get(self.lang), *texts.values()) if t), ""))
 
         order = [self.lang] + [lang for lang in texts if lang != self.lang]
         intent = parse_any(stripped, order)
@@ -557,6 +558,7 @@ class Assistant:
     def _set_stage_mode(self, on: bool, lang, announce: bool = True) -> None:
         self.magic.stage_mode = on
         self._set_persona()
+        self.emit("stage", on)
         if announce:
             self.tell("stage_on" if on else "stage_off", lang)
 
@@ -595,6 +597,34 @@ class Assistant:
         return {"secret": card.spoken(self.lang) if card else self.magic.secret,
                 "spectacle": self.magic.stage_mode, "message": message}
 
+
+    # --- interface
+
+    def _do_ui_hud(self, lang):
+        self.emit("show_hud")
+
+    def _do_ui_widget(self, lang):
+        self.emit("show_widget")
+
+    def hud_data(self, slow: bool) -> dict:
+        """Informations affichées par le HUD (appelé régulièrement depuis un autre fil)."""
+        info: dict = {"reminders": [f"{_when_words(r.when, self.lang)} — {r.text}"
+                                    for r in self.reminders.upcoming()[:5]]}
+        try:
+            info["status"] = self.system.status()
+        except Exception:
+            pass
+        if slow:
+            try:
+                info["weather"] = self.weather.report("", self.lang)
+            except Exception:
+                pass
+            try:
+                feeds = self.config.news_feeds.get(self.lang) or news_feeds.DEFAULT_FEEDS[self.lang]
+                info["news"] = [h.title for h in self.news.fetch_headlines(feeds, 5)]
+            except Exception:
+                pass
+        return info
 
     # --- mémoire
 
