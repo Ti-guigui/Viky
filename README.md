@@ -127,6 +127,8 @@ Testez chaque phrase en répétition : la fenêtre affiche ce que Viky a compris
 3. Double-cliquez sur **`installer.bat`**. Le script installe les dépendances et les modèles de reconnaissance vocale (environ 90 Mo, une seule fois).
 4. Double-cliquez sur **`lancer_viky.bat`**.
 
+**Lancer Viky à chaque démarrage de Windows** : double-cliquez sur **`demarrage_auto.bat`**. Viky démarre alors toute seule, en fenêtre réduite. Pour annuler : `retirer_demarrage_auto.bat`.
+
 **Voix française** : si Viky a un accent anglais, allez dans **Paramètres → Heure et langue → Voix → Ajouter des voix → Français**.
 
 ### L'intelligence artificielle (optionnel, mais recommandé)
