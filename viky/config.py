@@ -53,10 +53,36 @@ class Config:
     piper_voices: dict[str, str] = field(default_factory=lambda: {
         "fr": "fr_FR-siwis-medium", "en": "en_US-amy-medium"})
     voice_speed: float = 1.0
+    mail_addresses: dict[str, str] = field(default_factory=dict)  # {"gmail": adresse, "icloud": adresse}
+    mail_sender: str = "gmail"
+    icloud_calendar: str | None = None
+    contacts: dict[str, str] = field(default_factory=dict)
     interface: str = "widget"
     recognizer: str = "whisper"
     whisper_size: str = "small"
     whisper_device: str = "auto"
+
+    def mail_accounts(self) -> list:
+        """Comptes e-mail dont le mot de passe d'application est enregistré."""
+        from .accounts import secret
+        from .mail import Account
+
+        accounts = []
+        for provider, address in self.mail_addresses.items():
+            password = secret(f"{provider}:{address}")
+            if password:
+                accounts.append(Account(provider, address, password))
+        return accounts
+
+    def agenda(self):
+        """Agendas Google (adresses iCal secrètes) et iCloud."""
+        from .accounts import secret
+        from .agenda import Agenda
+
+        urls = [u for u in (secret("google_ical") or "").splitlines() if u.strip()]
+        icloud = self.mail_addresses.get("icloud")
+        password = secret(f"icloud:{icloud}") if icloud else None
+        return Agenda(urls, icloud if password else None, password, self.icloud_calendar)
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -101,6 +127,12 @@ def load_config(path: Path | None = None) -> Config:
 
     config.interface = data.get("interface", {}).get("mode", config.interface)
 
+    accounts = data.get("comptes", {})
+    config.mail_addresses = {p: accounts[p] for p in ("gmail", "icloud") if accounts.get(p)}
+    config.mail_sender = accounts.get("envoi", config.mail_sender)
+    config.icloud_calendar = accounts.get("calendrier_icloud") or None
+    config.contacts = {normalize(k): v for k, v in data.get("contacts", {}).items()}
+
     listening = data.get("reconnaissance", {})
     config.recognizer = listening.get("moteur", config.recognizer)
     config.whisper_size = listening.get("taille_whisper", config.whisper_size)
@@ -122,3 +154,4 @@ def load_config(path: Path | None = None) -> Config:
     if config.lang not in config.listen_langs:
         config.listen_langs.insert(0, config.lang)
     return config
+

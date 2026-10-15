@@ -31,6 +31,8 @@ _KINDS_FR = r"(fichier|document|pdf|presentation|diaporama|powerpoint|diapo|tabl
 _NUM_FR = (r"(?P<n>\d+|un|une|premier|premiere|deux|deuxieme|second|seconde|trois|troisieme|quatre|"
            r"quatrieme|cinq|cinquieme|six|sixieme|sept|septieme|huit|huitieme|dernier|derniere)")
 _NUM_EN = r"(?P<n>\d+|one|first|two|second|three|third|four|fourth|five|fifth|six|sixth|last)"
+_MAIL_FR = r"(e ?mails?|mails?|courriels?)"
+_MAIL_EN = r"(e ?mails?|mails?)"
 _KINDS_EN = r"(file|document|pdf|presentation|slideshow|powerpoint|slides|spreadsheet|excel|workbook|photo|picture|image|video)"
 
 _PATTERNS: dict[str, list[tuple[str, str]]] = {
@@ -49,6 +51,20 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("remember", r"^(souviens toi|rappelle toi|retiens bien|retiens|memorise|n oublie pas)( que| de| d)? (?P<fact>.+)$"),
         ("recall", r"(que sais tu (de|sur) moi|qu est ce que tu sais (de|sur) moi|de quoi tu te souviens|qu as tu retenu)"),
         ("forget", r"^(oublie tout|efface ta memoire|oublie ce que tu sais sur moi)$"),
+        # --- e-mails et agenda
+        ("mail_check", rf"({_MAIL_FR} (non lus|recus)|mes {_MAIL_FR}|nouveaux {_MAIL_FR}|(des|du|de nouveaux) {_MAIL_FR}|"
+                       rf"ma boite (mail|de reception)|j ai du courrier)"),
+        ("mail_read", rf"^(lis|ouvre|lire|resume)( moi)?( le)? {_MAIL_FR}( numero)? {_NUM_FR}$"),
+        ("mail_read", rf"^(lis|ouvre|lire|resume)( moi)? le {_NUM_FR} {_MAIL_FR}$"),
+        ("mail_send", rf"^(envoie|ecris|redige)( un)? ({_MAIL_FR}|message) a (?P<to>.+?)"
+                      rf"( (pour (lui |leur )?dire|disant|en disant) (que |qu )?(?P<body>.+))?$"),
+        ("mail_file", rf"^(envoie|transfere|partage)( moi)? (?P<file>.+?) a (?P<to>.+?) par {_MAIL_FR}$"),
+        ("mail_file", r"^(envoie|transfere|partage)( moi)? (?P<file>.+?) a (?P<to>[^ ]+( [^ ]+)?)$"),
+        ("agenda_add", r"^(ajoute|mets|cree|note|programme|inscris)( moi)? (un |le )?(rendez vous|rdv|evenement|reunion)"
+                       r"(?P<rest>.*)$"),
+        ("agenda_add", r"^(ajoute|mets|note|inscris) (?P<rest>.+) (a|dans) (mon|l) (agenda|calendrier)$"),
+        ("agenda", r"^(?P<text>.*(mon agenda|mes rendez vous|mon planning|qu est ce que j ai( de prevu)?|prochain rendez vous|"
+                   r"mon emploi du temps|ai je (des|un) rendez vous|mon calendrier).*)$"),
         # --- rappels, minuteurs, briefing
         ("timer", r"^((lance|mets|demarre|fais|programme)( moi)? )?(un )?(minuteur|chrono|compte a rebours|timer)"
                   r"( de| pour| dans)? (?P<duration>.+)$"),
@@ -176,6 +192,12 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("remember", r"^(remember|don t forget|memorize)( that)? (?P<fact>.+)$"),
         ("recall", r"(what do you know about me|what do you remember)"),
         ("forget", r"^(forget everything|erase your memory)$"),
+        ("mail_check", rf"(my {_MAIL_EN}|new {_MAIL_EN}|check (my )?{_MAIL_EN}|my inbox)"),
+        ("mail_read", rf"^(read|open)( me)?( the)? {_MAIL_EN}( number)? {_NUM_EN}$"),
+        ("mail_send", rf"^(send|write)( an| a)? ({_MAIL_EN}|message) to (?P<to>.+?)( (saying|to say) (that )?(?P<body>.+))?$"),
+        ("mail_file", r"^(send|share) (?P<file>.+?) to (?P<to>.+?)( by e ?mail)?$"),
+        ("agenda_add", r"^(add|schedule|create) (an |a )?(appointment|event|meeting)(?P<rest>.*)$"),
+        ("agenda", r"^(?P<text>.*(my (calendar|agenda|schedule)|my appointments|what do i have|next appointment).*)$"),
         ("timer", r"^(set |start )?(a )?(timer|countdown)( for)? (?P<duration>.+)$"),
         ("remind", r"^(remind me|set a reminder)(?P<rest>.*)$"),
         ("list_reminders", r"(my reminders|what s on my schedule|what do i have planned)"),

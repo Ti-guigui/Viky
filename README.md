@@ -74,6 +74,28 @@ Branchez le projecteur en **HDMI**, en mode **écran étendu** (touche Windows +
 | « Affiche le bureau », « Change de fenêtre », « Agrandis », « Réduis » | Fenêtres |
 | « Éteins l'ordinateur », « Redémarre le PC », « Mets le PC en veille » | Demande confirmation (« confirme »), puis exécute ; « annule » arrête un arrêt en cours |
 
+### E-mails et agenda (Gmail, iCloud, Google Agenda)
+
+| Vous dites | Viky fait |
+|---|---|
+| « Est-ce que j'ai des nouveaux mails ? » | Nombre de messages non lus et les 5 derniers (expéditeur et objet) |
+| « Lis le mail numéro deux » | Lit le message, ou le résume avec l'IA s'il est long |
+| « Envoie un mail à Paul pour lui dire que je serai en retard » | Prépare l'e-mail, le relit et attend « confirme » |
+| « Envoie un mail à Marie » | Demande « Que voulez-vous écrire à Marie ? », puis prend votre réponse |
+| « Envoie le PDF contrat à Paul » | Envoie le fichier en pièce jointe (après confirmation) |
+| « Qu'est-ce que j'ai demain ? », « Mon agenda de la semaine » | Lit vos rendez-vous Google et iCloud |
+| « Ajoute un rendez-vous chez le dentiste demain à 9 h » | L'ajoute au calendrier iCloud (visible sur l'iPhone) |
+
+Viky ne marque jamais vos e-mails comme lus et n'envoie rien sans votre « confirme ».
+
+**Réglage (une seule fois)** : double-cliquez sur **`configurer_comptes.bat`**. Il vous faut :
+
+- **Gmail** : un *mot de passe d'application* sur [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords). La validation en deux étapes doit être activée.
+- **iCloud** : un *mot de passe pour app* sur [account.apple.com](https://account.apple.com), rubrique Connexion et sécurité. Il sert aussi au calendrier iCloud.
+- **Google Agenda** : dans [agenda.google.com](https://calendar.google.com) → Paramètres → votre agenda → *Adresse secrète au format iCal*. Viky lit cet agenda ; les nouveaux rendez-vous sont ajoutés au calendrier iCloud.
+
+Les mots de passe sont rangés dans le Gestionnaire d'identification de Windows, jamais dans un fichier. Ajoutez ensuite vos contacts dans `config.toml`, section `[contacts]` (par exemple `"paul" = "paul.martin@gmail.com"`). Vous pouvez aussi dicter une adresse : « paul point martin arobase gmail point com ».
+
 ### L'interface
 
 Viky s'affiche dans une vraie fenêtre Windows, pas dans un navigateur :
@@ -200,6 +222,7 @@ Ouvrez `config.toml` avec le Bloc-notes. Vous pouvez y régler :
 | `viky/ui.py`, `tkloop.py` | Interface Jarvis : widget et HUD |
 | `viky/system.py` | Contrôle du PC |
 | `viky/reminders.py`, `memory.py` | Rappels, minuteurs et mémoire |
+| `viky/mail.py`, `agenda.py`, `accounts.py` | E-mails, agendas et comptes |
 | `viky/intents.py` | Comprend les commandes (français et anglais) |
 | `viky/assistant.py` | Le cerveau : réveil, commandes, mode spectacle |
 | `viky/files.py` | Retrouve un fichier à partir de son nom prononcé |
@@ -213,8 +236,7 @@ Tests : `pip install -r requirements-dev.txt` puis `python -m pytest`.
 
 ## Feuille de route
 
-- [ ] E-mails : lire et envoyer à la voix, envoyer un fichier
-- [ ] Agenda (Outlook ou Google)
+- [ ] Ajouter des rendez-vous directement dans Google Agenda
 - [ ] Modifications Excel/PowerPoint plus libres grâce à l'IA (« ajoute une ligne total »)
 - [ ] Plus d'effets de révélation (nombre, dessin, prédiction cachée dans un fichier)
 - [ ] Exécutable Windows `.exe` sans installation de Python

@@ -231,7 +231,7 @@ class JarvisUI:
             "state": c.create_text(w / 2, h * 0.42 + radius + 30, text="", fill=CYAN, font=("Segoe UI", 12)),
         }
         panel_w = w * 0.25
-        self.hud_items["reminders_title"] = c.create_text(60, h * 0.25, text="RAPPELS", anchor="w",
+        self.hud_items["reminders_title"] = c.create_text(60, h * 0.25, text="AGENDA ET RAPPELS", anchor="w",
                                                           fill=CYAN, font=("Segoe UI", 11, "bold"))
         self.hud_items["reminders"] = c.create_text(60, h * 0.25 + 24, text="", anchor="nw", fill=WHITE,
                                                     font=("Segoe UI", 11), width=panel_w)
@@ -283,7 +283,7 @@ class JarvisUI:
             return
         c, info = self.hud_canvas, self.info
         c.itemconfigure(self.hud_items["weather"], text=info.get("weather", ""))
-        reminders = info.get("reminders") or ["Aucun rappel"]
+        reminders = info.get("reminders") or ["Rien de prévu"]
         c.itemconfigure(self.hud_items["reminders"], text="\n\n".join(reminders[:5]))
         c.itemconfigure(self.hud_items["news"], text="\n\n".join(f"{i}. {t}" for i, t in
                                                                  enumerate(info.get("news", [])[:5], 1)))

@@ -128,6 +128,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="viky", description="Viky, assistante vocale hors ligne.")
     parser.add_argument("--texte", action="store_true", help="taper les commandes au clavier au lieu de parler")
     parser.add_argument("--muet", action="store_true", help="afficher les réponses sans les prononcer")
+    parser.add_argument("--configurer-comptes", action="store_true",
+                        help="régler les comptes Gmail / iCloud et les agendas, puis quitter")
     parser.add_argument("--sans-interface", action="store_true", help="ne pas ouvrir le widget ni le HUD")
     parser.add_argument("--hud", action="store_true", help="ouvrir directement le grand HUD")
     parser.add_argument("--langue", choices=["fr", "en"], help="langue de réponse par défaut")
@@ -141,6 +143,13 @@ def main() -> None:
         config.lang = args.langue
         if args.langue not in config.listen_langs:
             config.listen_langs.insert(0, args.langue)
+
+    if args.configurer_comptes:
+        from .accounts import setup
+        from .config import DEFAULT_CONFIG
+
+        setup(args.config or DEFAULT_CONFIG)
+        return
 
     if args.telecharger_modeles:
         from .models import download_all

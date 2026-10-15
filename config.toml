@@ -89,6 +89,18 @@ valeur = "Je suis là. Et je vois tout."
 "es-tu prête" = "Toujours. Je suis née prête."
 "présente-toi au public" = "Bonsoir à toutes et à tous. Je suis Viky, l'assistante du magicien. Ne me quittez pas des yeux… ni des oreilles."
 
+[comptes]
+# Adresses e-mail (les mots de passe sont rangés à part : lancez configurer_comptes.bat)
+# gmail = "vous@gmail.com"
+# icloud = "vous@icloud.com"
+envoi = "gmail"              # compte utilisé pour envoyer : "gmail" ou "icloud"
+calendrier_icloud = ""       # calendrier iCloud où ajouter les rendez-vous (vide = le premier)
+
+[contacts]
+# Pour « Viky, envoie un mail à Paul » : nom prononcé = adresse
+# "paul" = "paul.martin@gmail.com"
+# "maman" = "maman@icloud.com"
+
 [applications]
 # Ajoutez vos propres applications : "nom prononcé" = "commande ou chemin complet"
 # "mon jeu" = 'C:\Jeux\MonJeu\jeu.exe'

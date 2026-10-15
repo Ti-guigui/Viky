@@ -19,6 +19,8 @@ from .config import Config
 from .files import FileIndex, kind_of, split_kind
 from .intents import Intent, parse_any
 from .magic import STAGE_PERSONA, SUSPENSE, MagicShow, parse_card
+from . import mail as mail_module
+from .agenda import Agenda, day_range
 from .memory import Memory
 from .reminders import Reminder, Reminders, parse_duration, parse_reminder
 from .messages import date_sentence, say, time_sentence
@@ -46,6 +48,8 @@ class Assistant:
                  system: ModuleType = default_system,
                  memory: Memory | None = None,
                  reminders: Reminders | None = None,
+                 agenda: Agenda | None = None,
+                 mailer: ModuleType = mail_module,
                  clock: Callable[[], float] = time.monotonic,
                  pause: Callable[[float], None] = time.sleep) -> None:
         self.config = config
@@ -73,7 +77,12 @@ class Assistant:
         self.reminders = reminders or Reminders(data / "rappels.json")
         self.reminders.on_due = self._on_reminder
         self.brain.context = self.memory.context
-        self.pending_power: tuple[str, float] | None = None  # action en attente de confirmation
+        self.pending = None  # (action, échéance) : action en attente d'un « confirme »
+        self.dialog = None  # (fonction, échéance) : Viky attend la réponse à une question
+        self.mailer = mailer
+        self.mail_accounts = config.mail_accounts()
+        self.agenda = agenda or config.agenda()
+        self.last_mails: list = []
         self.listeners: list = []  # interface graphique : reçoit les événements de Viky
         self._set_persona()
         self.clock = clock
@@ -131,6 +140,21 @@ class Assistant:
         if require_wake and not heard_wake and not self.is_awake():
             return True
         self.emit("heard", next((t for t in (texts.get(self.lang), *texts.values()) if t), ""))
+        if self.dialog and self.clock() < self.dialog[1]:
+            handler, _ = self.dialog
+            self.dialog = None
+            answer = next((t for t in (stripped.get(self.lang), *stripped.values()) if t), "")
+            if normalize(answer) in ("annule", "laisse tomber", "non", "cancel", "never mind"):
+                self.tell("cancelled")
+            elif answer:
+                try:
+                    handler(self.lang, answer)
+                except Exception:
+                    traceback.print_exc()
+                    self.tell("failed")
+            self.awake_until = self.clock() + self.config.awake_seconds
+            return True
+        self.dialog = None
 
         order = [self.lang] + [lang for lang in texts if lang != self.lang]
         intent = parse_any(stripped, order)
@@ -164,6 +188,9 @@ class Assistant:
             self.tell("not_available", intent.lang)
         except BrainUnavailable:
             self.tell("no_brain", intent.lang)
+        except (FileNotFoundError, PermissionError):
+            traceback.print_exc()
+            self.tell("failed", intent.lang)
         except OSError:
             traceback.print_exc()
             self.tell("offline", intent.lang)
@@ -608,8 +635,15 @@ class Assistant:
 
     def hud_data(self, slow: bool) -> dict:
         """Informations affichées par le HUD (appelé régulièrement depuis un autre fil)."""
-        info: dict = {"reminders": [f"{_when_words(r.when, self.lang)} — {r.text}"
-                                    for r in self.reminders.upcoming()[:5]]}
+        if slow and self.agenda.configured:
+            try:
+                start, end, _ = day_range("aujourd'hui", datetime.now())
+                self._hud_events = [f"{e.start:%H:%M} — {e.title}" if not e.all_day else f"Journée — {e.title}"
+                                    for e in self.agenda.events(start, end)]
+            except Exception:
+                pass
+        info: dict = {"reminders": getattr(self, "_hud_events", []) +
+                      [f"{_when_words(r.when, self.lang)} — {r.text}" for r in self.reminders.upcoming()[:5]]}
         try:
             info["status"] = self.system.status()
         except Exception:
@@ -714,6 +748,12 @@ class Assistant:
                 self.speak(weather, lang)
         except OSError:
             pass
+        if self.agenda.configured:
+            try:
+                start, end, _ = day_range("aujourd'hui", now)
+                self._say_events(lang, self.agenda.events(start, end), "aujourd'hui")
+            except Exception:
+                traceback.print_exc()
         today = self.reminders.today(now)
         if today:
             self.tell("reminders_intro", lang, count=len(today))
@@ -729,6 +769,145 @@ class Assistant:
             for number, headline in enumerate(self.headlines[:3], start=1):
                 self.speak(f"{number}. {headline.title}", lang)
         self.tell("briefing_end", lang)
+
+    # --- e-mails
+
+    def _accounts(self, lang) -> list:
+        if not self.mail_accounts:
+            self.tell("mail_not_configured", lang)
+        return self.mail_accounts
+
+    def _do_mail_check(self, lang):
+        accounts = self._accounts(lang)
+        if not accounts:
+            return
+        total, mails = 0, []
+        for account in accounts:
+            count, recent = self.mailer.unread(account, limit=5)
+            total += count
+            mails += recent
+        mails.sort(key=lambda m: m.date.timestamp() if m.date else 0, reverse=True)
+        self.last_mails = mails[:5]
+        if not total:
+            self.tell("mail_none", lang)
+            return
+        self.tell("mail_count", lang, count=total)
+        for number, item in enumerate(self.last_mails, start=1):
+            self.tell("mail_line", lang, n=number, sender=item.sender, subject=item.subject)
+        self.tell("mail_hint", lang)
+
+    def _do_mail_read(self, lang, n):
+        if not self.last_mails:
+            self._do_mail_check(lang)
+            return
+        index = parse_number(n) or 0
+        if not 1 <= index <= len(self.last_mails):
+            self.tell("news_bad_number", lang, count=len(self.last_mails))
+            return
+        item = self.last_mails[index - 1]
+        text = self.mailer.body(item)
+        self.tell("mail_header", lang, sender=item.sender, subject=item.subject)
+        if len(text) > 500 and self.brain.available:
+            self.tell("thinking", lang)
+            prompt = ("Résume cet e-mail à l'oral en 3 ou 4 phrases :\n\n" if lang == "fr"
+                      else "Summarize this e-mail out loud in 3 or 4 sentences:\n\n")
+            self.speak(self.brain.ask(prompt + text, lang), lang)
+        else:
+            self.speak(text[:600] or say(lang, "mail_empty"), lang)
+
+    def _contact(self, lang, name: str) -> tuple[str, str] | None:
+        """Adresse d'un contact (section [contacts] de config.toml) ou adresse dictée."""
+        key = normalize(name)
+        for contact, address in self.config.contacts.items():
+            if key == contact or key in contact.split() or contact in key:
+                return contact.title(), address
+        address = self.mailer.spoken_address(name)
+        if address:
+            return address, address
+        self.tell("contact_unknown", lang, name=name)
+        return None
+
+    def _send_mail(self, lang, name, address, text, attachments=None, subject=None):
+        account = next((a for a in self.mail_accounts if a.provider == self.config.mail_sender),
+                       self.mail_accounts[0])
+        text = text[:1].upper() + text[1:]
+        subject = subject or (" ".join(text.split()[:7]) + ("…" if len(text.split()) > 7 else ""))
+        signature = f"\n\n{self.memory.name}" if self.memory.name else ""
+        message = self.mailer.build_message(account, address, subject, text + signature,
+                                            self.memory.name or "", attachments)
+
+        def send():
+            self.mailer.send(account, message)
+            self.tell("mail_sent", lang, name=name)
+
+        what = f"{attachments[0].name}" if attachments else text
+        self.confirm(lang, "mail_confirm", send, name=name, account=account.label, text=what)
+
+    def _do_mail_send(self, lang, to, body=None):
+        if not self._accounts(lang):
+            return
+        contact = self._contact(lang, to)
+        if contact is None:
+            return
+        name, address = contact
+        if body:
+            self._send_mail(lang, name, address, body)
+        else:
+            self.ask(lang, "mail_what", lambda lang, text: self._send_mail(lang, name, address, text), name=name)
+
+    def _do_mail_file(self, lang, file, to):
+        if not self._accounts(lang):
+            return
+        path = self.files.find(file)
+        if path is None:
+            self.tell("file_not_found", lang, name=split_kind(file)[1] or file)
+            return
+        contact = self._contact(lang, to)
+        if contact is None:
+            return
+        name, address = contact
+        text = say(lang, "mail_file_body", name=path.stem)
+        self._send_mail(lang, name, address, text, [path], subject=path.stem)
+
+    # --- agenda
+
+    def _say_events(self, lang, events, label) -> None:
+        if not events:
+            self.tell("agenda_empty", lang, label=label)
+            return
+        self.tell("agenda_count", lang, label=label[:1].upper() + label[1:], count=len(events))
+        several_days = len({e.start.date() for e in events}) > 1
+        for event in events[:8]:
+            day = (f"{WEEKDAYS[lang][event.start.weekday()]} " if several_days else "")
+            if event.all_day:
+                self.speak(f"{day}{say(lang, 'all_day')} : {event.title}", lang)
+            else:
+                clock = f"{event.start.hour} h {event.start.minute:02d}" if event.start.minute else f"{event.start.hour} h"
+                self.speak(f"{day}{'à' if lang == 'fr' else 'at'} {clock} : {event.title}", lang)
+
+    def _do_agenda(self, lang, text):
+        if not self.agenda.configured:
+            self.tell("agenda_not_configured", lang)
+            return
+        start, end, label = day_range(text, datetime.now())
+        events = self.agenda.events(start, end)
+        if label == "prochain":
+            events = events[:1]
+            label = "prochainement" if lang == "fr" else "next"
+        self._say_events(lang, events, label)
+
+    def _do_agenda_add(self, lang, rest=""):
+        if not self.agenda.can_add:
+            self.tell("agenda_not_configured", lang)
+            return
+        due, what = parse_reminder(rest, datetime.now())
+        if due is None:
+            self.tell("remind_when", lang)
+            return
+        what = what or ("Rendez-vous" if lang == "fr" else "Appointment")
+        what = what[:1].upper() + what[1:]
+        calendar = self.agenda.add(what, due)
+        self.tell("agenda_added", lang, what=what, when=_when_words(due, lang), calendar=calendar)
 
     # --- contrôle du PC
 
@@ -784,9 +963,24 @@ class Assistant:
     def _do_minimize(self, lang):
         self.system.minimize_window()
 
+    def ask(self, lang, key: str, handler, **kwargs) -> None:
+        """Pose une question ; la prochaine phrase (sans « Viky ») sera la réponse."""
+        self.dialog = (handler, self.clock() + 30)
+        self.awake_until = self.clock() + 30
+        self.tell(key, lang, **kwargs)
+
+    def confirm(self, lang, key: str, action, **kwargs) -> None:
+        """Demande « confirme » avant une action importante (arrêt du PC, envoi d'un e-mail…)."""
+        self.pending = (action, self.clock() + 30)
+        self.awake_until = self.clock() + 30
+        self.tell(key, lang, **kwargs)
+
     def _ask_power(self, lang, action):
-        self.pending_power = (action, self.clock() + 20)
-        self.tell(f"confirm_{action}", lang)
+        def run():
+            self.tell(f"doing_{action}", lang)
+            self.system.power(action)
+            self.last_power = action
+        self.confirm(lang, f"confirm_{action}", run)
 
     def _do_shutdown(self, lang):
         self._ask_power(lang, "shutdown")
@@ -798,19 +992,17 @@ class Assistant:
         self._ask_power(lang, "sleep")
 
     def _do_confirm(self, lang):
-        if not self.pending_power or self.clock() > self.pending_power[1]:
-            self.pending_power = None
+        if not self.pending or self.clock() > self.pending[1]:
+            self.pending = None
             self.tell("ok", lang)
             return
-        action = self.pending_power[0]
-        self.pending_power = None
-        self.tell(f"doing_{action}", lang)
-        self.system.power(action)
-        self.last_power = action
+        action = self.pending[0]
+        self.pending = None
+        action()
 
     def _do_cancel(self, lang):
-        if self.pending_power:
-            self.pending_power = None
+        if self.pending:
+            self.pending = None
             self.tell("cancelled", lang)
         elif getattr(self, "last_power", None) in ("shutdown", "restart"):
             self.system.power("cancel")
@@ -818,6 +1010,10 @@ class Assistant:
             self.tell("power_cancelled", lang)
         else:
             self.tell("ok", lang)
+
+
+WEEKDAYS = {"fr": ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"],
+            "en": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]}
 
 
 def _duration_words(seconds: int, lang: str) -> str:
