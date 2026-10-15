@@ -14,6 +14,13 @@ MODELS_DIR = ROOT / "models"
 DEFAULT_CONFIG = ROOT / "config.toml"
 
 
+def _documents() -> Path:
+    for candidate in (Path.home() / "Documents", Path.home() / "OneDrive" / "Documents"):
+        if candidate.exists():
+            return candidate
+    return Path.home() / "Documents"
+
+
 @dataclass
 class Config:
     lang: str = "fr"
@@ -41,6 +48,7 @@ class Config:
     remote: bool = True
     remote_pin: str = ""
     remote_port: int = 8765
+    data_dir: Path = field(default_factory=lambda: _documents() / "Viky")
 
 
 def load_config(path: Path | None = None) -> Config:

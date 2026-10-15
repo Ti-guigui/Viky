@@ -11,6 +11,7 @@ from types import ModuleType
 from typing import Callable, Protocol
 
 from . import actions as default_actions
+from . import system as default_system
 from . import news as news_feeds
 from . import projector as default_projector
 from .brain import Brain, BrainUnavailable
@@ -18,6 +19,8 @@ from .config import Config
 from .files import FileIndex, kind_of, split_kind
 from .intents import Intent, parse_any
 from .magic import STAGE_PERSONA, SUSPENSE, MagicShow, parse_card
+from .memory import Memory
+from .reminders import Reminder, Reminders, parse_duration, parse_reminder
 from .messages import date_sentence, say, time_sentence
 from .numbers import parse_cell, parse_number, parse_value
 from .report import save_report
@@ -40,6 +43,9 @@ class Assistant:
                  weather: Weather | None = None,
                  news: ModuleType = news_feeds,
                  stage=None,
+                 system: ModuleType = default_system,
+                 memory: Memory | None = None,
+                 reminders: Reminders | None = None,
                  clock: Callable[[], float] = time.monotonic,
                  pause: Callable[[float], None] = time.sleep) -> None:
         self.config = config
@@ -61,6 +67,14 @@ class Assistant:
 
             stage = Stage(self._projector_rect)
         self.stage = stage
+        self.system = system
+        data = config.data_dir
+        self.memory = memory or Memory(data / "memoire.json")
+        self.reminders = reminders or Reminders(data / "rappels.json")
+        self.reminders.on_due = self._on_reminder
+        self.brain.context = self.memory.context
+        self.pending_power: tuple[str, float] | None = None  # action en attente de confirmation
+        self.listeners: list = []  # interface graphique : reçoit les événements de Viky
         self._set_persona()
         self.clock = clock
         self.lang = config.lang
@@ -72,7 +86,19 @@ class Assistant:
 
     def tell(self, key: str, lang: str | None = None, **kwargs) -> None:
         lang = lang or self.lang
-        self.speaker.say(say(lang, key, **kwargs), lang)
+        self.speak(say(lang, key, **kwargs), lang)
+
+    def speak(self, text: str, lang: str | None = None) -> None:
+        self.emit("reply", text)
+        self.speaker.say(text, lang or self.lang)
+
+    def emit(self, event: str, value=None) -> None:
+        """Prévient l'interface graphique (écoute, réflexion, réponse…)."""
+        for listener in self.listeners:
+            try:
+                listener(event, value)
+            except Exception:
+                traceback.print_exc()
 
     def greet(self, text_mode: bool = False) -> None:
         self.tell("ready_text" if text_mode else "ready")
@@ -133,6 +159,8 @@ class Assistant:
             return handler(intent.lang, **intent.args) is not False
         except self.projector.NotAvailable:
             self.tell("not_available", intent.lang)
+        except (self.system.NotSupported, ImportError):
+            self.tell("not_available", intent.lang)
         except BrainUnavailable:
             self.tell("no_brain", intent.lang)
         except OSError:
@@ -159,9 +187,6 @@ class Assistant:
 
     def _do_thanks(self, lang):
         self.tell("thanks", lang)
-
-    def _do_greet(self, lang):
-        self.tell("greet", lang)
 
     def _do_whoami(self, lang):
         self.tell("whoami", lang)
@@ -569,6 +594,219 @@ class Assistant:
         card = self.magic.card
         return {"secret": card.spoken(self.lang) if card else self.magic.secret,
                 "spectacle": self.magic.stage_mode, "message": message}
+
+
+    # --- mémoire
+
+    def _do_greet(self, lang):
+        if self.memory.name:
+            self.speak(("Bonjour " if lang == "fr" else "Hello ") + self.memory.name + " !", lang)
+        else:
+            self.tell("greet", lang)
+
+    def _do_set_name(self, lang, name):
+        self.memory.set_name(name)
+        self.tell("name_set", lang, name=self.memory.name)
+
+    def _do_remember(self, lang, fact):
+        self.memory.remember(fact)
+        self.tell("remembered", lang)
+
+    def _do_recall(self, lang):
+        if not self.memory.name and not self.memory.facts:
+            self.tell("memory_empty", lang)
+            return
+        if self.memory.name:
+            self.tell("recall_name", lang, name=self.memory.name)
+        for fact in self.memory.facts[-5:]:
+            self.speak(fact["texte"], lang)
+
+    def _do_forget(self, lang):
+        self.memory.forget_all()
+        self.tell("forgotten", lang)
+
+    # --- rappels et minuteurs
+
+    def _do_timer(self, lang, duration):
+        seconds = parse_duration(duration)
+        if not seconds:
+            self.tell("bad_duration", lang)
+            return
+        label = _duration_words(seconds, lang)
+        self.reminders.add(time.time() + seconds, label, "minuteur")
+        self.tell("timer_set", lang, duration=label)
+
+    def _do_remind(self, lang, rest=""):
+        due, what = parse_reminder(rest, datetime.now())
+        if due is None:
+            self.tell("remind_when", lang)
+            return
+        what = what or ("rappel" if lang == "fr" else "reminder")
+        self.reminders.add(due.timestamp(), what)
+        self.tell("reminder_set", lang, when=_when_words(due, lang), what=what)
+
+    def _do_list_reminders(self, lang):
+        upcoming = self.reminders.upcoming()
+        if not upcoming:
+            self.tell("no_reminders", lang)
+            return
+        self.tell("reminders_intro", lang, count=len(upcoming))
+        for reminder in upcoming[:5]:
+            self.speak(f"{_when_words(reminder.when, lang)} : {reminder.text}", lang)
+
+    def _do_clear_reminders(self, lang):
+        self.reminders.clear()
+        self.tell("reminders_cleared", lang)
+
+    def _on_reminder(self, reminder: Reminder) -> None:
+        """Appelé par le fil des rappels quand un rappel arrive à échéance."""
+        with self.lock:
+            self.emit("reminder", reminder.text)
+            try:
+                self.system.beep()
+            except Exception:
+                pass
+            if reminder.kind == "minuteur":
+                self.tell("timer_done", duration=reminder.text)
+            else:
+                self.tell("reminder_due", what=reminder.text)
+
+    def _do_briefing(self, lang):
+        now = datetime.now()
+        hello = say(lang, "briefing_hello_morning" if now.hour < 18 else "briefing_hello_evening")
+        if self.memory.name:
+            hello = hello.rstrip(".!") + f", {self.memory.name}."
+        self.speak(hello, lang)
+        self.speak(date_sentence(lang, now) + " " + time_sentence(lang, now), lang)
+        try:
+            weather = self.weather.report("", lang)
+            if weather:
+                self.speak(weather, lang)
+        except OSError:
+            pass
+        today = self.reminders.today(now)
+        if today:
+            self.tell("reminders_intro", lang, count=len(today))
+            for reminder in today[:5]:
+                self.speak(f"{_when_words(reminder.when, lang)} : {reminder.text}", lang)
+        try:
+            feeds = self.config.news_feeds.get(lang) or news_feeds.DEFAULT_FEEDS[lang]
+            self.headlines = self.news.fetch_headlines(feeds, self.config.news_count)
+        except OSError:
+            self.headlines = []
+        if self.headlines:
+            self.tell("briefing_news", lang)
+            for number, headline in enumerate(self.headlines[:3], start=1):
+                self.speak(f"{number}. {headline.title}", lang)
+        self.tell("briefing_end", lang)
+
+    # --- contrôle du PC
+
+    def _do_status(self, lang):
+        info = self.system.status()
+        parts = []
+        if "battery" in info:
+            key = "status_battery_plugged" if info["plugged"] else "status_battery"
+            parts.append(say(lang, key, battery=info["battery"]))
+        parts.append(say(lang, "status_load", cpu=info["cpu"], ram=info["ram"]))
+        self.speak(" ".join(parts), lang)
+
+    def _do_wifi(self, lang):
+        name = self.system.wifi_name()
+        self.tell("wifi_on" if name else "wifi_off", lang, name=name)
+
+    def _brightness(self, lang, change=None, level=None):
+        value = self.system.brightness(change=change, level=level)
+        self.tell("brightness", lang, level=value)
+
+    def _do_brightness_up(self, lang):
+        self._brightness(lang, change=20)
+
+    def _do_brightness_down(self, lang):
+        self._brightness(lang, change=-20)
+
+    def _do_brightness_set(self, lang, level):
+        word = normalize(level)
+        value = 100 if "max" in word else 10 if "min" in word else parse_number(word.replace("pour cent", ""))
+        if value is None:
+            self.tell("not_understood", lang)
+            return
+        self._brightness(lang, level=value)
+
+    def _do_media_pause(self, lang):
+        self.system.media("play_pause")
+
+    def _do_media_next(self, lang):
+        self.system.media("next")
+
+    def _do_media_previous(self, lang):
+        self.system.media("previous")
+
+    def _do_desktop(self, lang):
+        self.system.show_desktop()
+
+    def _do_switch_window(self, lang):
+        self.system.switch_window()
+
+    def _do_maximize(self, lang):
+        self.system.maximize_window()
+
+    def _do_minimize(self, lang):
+        self.system.minimize_window()
+
+    def _ask_power(self, lang, action):
+        self.pending_power = (action, self.clock() + 20)
+        self.tell(f"confirm_{action}", lang)
+
+    def _do_shutdown(self, lang):
+        self._ask_power(lang, "shutdown")
+
+    def _do_restart(self, lang):
+        self._ask_power(lang, "restart")
+
+    def _do_sleep(self, lang):
+        self._ask_power(lang, "sleep")
+
+    def _do_confirm(self, lang):
+        if not self.pending_power or self.clock() > self.pending_power[1]:
+            self.pending_power = None
+            self.tell("ok", lang)
+            return
+        action = self.pending_power[0]
+        self.pending_power = None
+        self.tell(f"doing_{action}", lang)
+        self.system.power(action)
+        self.last_power = action
+
+    def _do_cancel(self, lang):
+        if self.pending_power:
+            self.pending_power = None
+            self.tell("cancelled", lang)
+        elif getattr(self, "last_power", None) in ("shutdown", "restart"):
+            self.system.power("cancel")
+            self.last_power = None
+            self.tell("power_cancelled", lang)
+        else:
+            self.tell("ok", lang)
+
+
+def _duration_words(seconds: int, lang: str) -> str:
+    hours, rest = divmod(seconds, 3600)
+    minutes, secs = divmod(rest, 60)
+    names = {"fr": ("heure", "minute", "seconde"), "en": ("hour", "minute", "second")}[lang]
+    parts = [f"{n} {name}{'s' if n > 1 else ''}" for n, name in zip((hours, minutes, secs), names) if n]
+    return (" et " if lang == "fr" else " and ").join(parts)
+
+
+def _when_words(moment: datetime, lang: str) -> str:
+    now = datetime.now()
+    clock = (f"{moment.hour} h {moment.minute:02d}" if moment.minute else f"{moment.hour} h") if lang == "fr" \
+        else moment.strftime("%I:%M %p").lstrip("0")
+    if moment.date() == now.date():
+        return ("aujourd'hui à " if lang == "fr" else "today at ") + clock
+    if (moment.date() - now.date()).days == 1:
+        return ("demain à " if lang == "fr" else "tomorrow at ") + clock
+    return (f"le {moment.day}/{moment.month} à " if lang == "fr" else f"on {moment.month}/{moment.day} at ") + clock
 
 
 def _spoken(value) -> str:

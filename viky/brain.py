@@ -61,10 +61,12 @@ class Brain:
         self.use_local = use_local
         self.history: list[dict] = []  # derniers échanges, pour « approfondis »
         self.persona: dict[str, str] | None = None  # personnalité de scène (mode spectacle)
+        self.context = None  # fonction(langue) -> ce que Viky sait de l'utilisateur
         self._client = None
 
     def _style(self, lang: str) -> str:
-        return SPOKEN_STYLE[lang] + (self.persona[lang] if self.persona else "")
+        extra = self.context(lang) if self.context else ""
+        return SPOKEN_STYLE[lang] + (self.persona[lang] if self.persona else "") + extra
 
     # ------------------------------------------------------------ disponibilité
 

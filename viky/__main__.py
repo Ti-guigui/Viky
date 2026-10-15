@@ -115,6 +115,7 @@ def main() -> None:
         return
 
     assistant = Assistant(config, Speaker(config.voice_rate, mute=args.muet))
+    assistant.reminders.start()
     if config.remote:
         start_remote(assistant)
     try:
