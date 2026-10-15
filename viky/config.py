@@ -59,7 +59,7 @@ class Config:
     contacts: dict[str, str] = field(default_factory=dict)
     interface: str = "widget"
     recognizer: str = "whisper"
-    whisper_size: str = "small"
+    whisper_size: str = "auto"
     whisper_device: str = "auto"
 
     def mail_accounts(self) -> list:

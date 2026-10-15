@@ -19,7 +19,7 @@ mode = "widget"
 [reconnaissance]
 # "whisper" = très précis (recommandé), "vosk" = léger mais moins précis
 moteur = "whisper"
-taille_whisper = "small"   # "medium" : encore plus précis avec une carte RTX 3060 ou mieux
+taille_whisper = "auto"    # auto = large-v3-turbo sur carte NVIDIA, small sur processeur
 appareil = "auto"          # "auto" = carte graphique NVIDIA si possible, sinon processeur
 
 [voix]
@@ -53,7 +53,7 @@ nombre_de_titres = 5
 [ia]
 # IA locale gratuite (Ollama, https://ollama.com) pour les questions courantes
 ia_locale = true
-modele_local = "qwen2.5:7b"       # sur un PC modeste (8 Go de RAM) : "qwen2.5:3b"
+modele_local = "qwen2.5:7b"       # idéal pour une RTX 3070 ; sur un PC modeste : "qwen2.5:3b"
 adresse_ollama = "http://localhost:11434"
 
 # Claude pour les recherches complètes et l'actualité approfondie (payant, internet requis).

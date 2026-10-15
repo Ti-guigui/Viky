@@ -69,12 +69,29 @@ def _enable_cuda_dlls() -> None:
                 os.environ["PATH"] = str(folder) + os.pathsep + os.environ.get("PATH", "")
 
 
+def has_cuda() -> bool:
+    """Vrai si une carte graphique NVIDIA utilisable est présente."""
+    try:
+        import ctranslate2
+
+        return ctranslate2.get_cuda_device_count() > 0
+    except Exception:
+        return False
+
+
+def pick_size(size: str, device: str) -> str:
+    """« auto » : large-v3-turbo sur carte graphique (très précis et rapide), small sur processeur."""
+    if size != "auto":
+        return size
+    return "large-v3-turbo" if device == "cuda" else "small"
+
+
 class WhisperRecognizer:
     """Transcrit avec Whisper ; détecte seul la langue parlée."""
 
     name = "Whisper"
 
-    def __init__(self, langs: list[str], models_dir: Path, size: str = "small", device: str = "auto",
+    def __init__(self, langs: list[str], models_dir: Path, size: str = "auto", device: str = "auto",
                  wake_words: list[str] | None = None) -> None:
         from faster_whisper import WhisperModel
 
@@ -88,7 +105,8 @@ class WhisperRecognizer:
             try:
                 if dev == "cuda":
                     _enable_cuda_dlls()
-                self.model = WhisperModel(size, device=dev, compute_type=compute, download_root=str(download))
+                self.size = pick_size(size, dev)
+                self.model = WhisperModel(self.size, device=dev, compute_type=compute, download_root=str(download))
                 if dev == "cuda":
                     self._check()  # échoue tout de suite si les bibliothèques CUDA manquent
                 self.device = dev
@@ -119,14 +137,14 @@ class WhisperRecognizer:
         return {lang: text}
 
 
-def make_recognizer(engine: str, langs: list[str], models_dir: Path, size: str = "small",
+def make_recognizer(engine: str, langs: list[str], models_dir: Path, size: str = "auto",
                     device: str = "auto", wake_words: list[str] | None = None):
     """Choisit le meilleur moteur disponible : Whisper, sinon Vosk."""
     if engine == "whisper":
         try:
             recognizer = WhisperRecognizer(langs, models_dir, size, device, wake_words)
             where = "carte graphique" if recognizer.device == "cuda" else "processeur"
-            print(f"[Viky] Reconnaissance vocale Whisper ({size}) sur le {where}.")
+            print(f"[Viky] Reconnaissance vocale Whisper ({recognizer.size}) sur le {where}.")
             return recognizer
         except Exception as error:
             print(f"[Viky] {error}. Utilisation de Vosk.")

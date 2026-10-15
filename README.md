@@ -178,7 +178,7 @@ Testez chaque phrase en répétition : la fenêtre affiche ce que Viky a compris
 
 **Lancer Viky à chaque démarrage de Windows** : double-cliquez sur **`demarrage_auto.bat`**. Viky démarre alors toute seule, en fenêtre réduite. Pour annuler : `retirer_demarrage_auto.bat`.
 
-**Voix et reconnaissance** : l'installateur télécharge la voix naturelle **Piper** et la reconnaissance vocale **Whisper**. Avec une carte NVIDIA (comme la RTX de l'ASUS TUF A17), il installe aussi l'accélération graphique : Whisper répond alors en une fraction de seconde. Sans carte NVIDIA, tout fonctionne sur le processeur, un peu plus lentement. En cas de souci, `config.toml` permet de revenir à Vosk et à la voix de Windows.
+**Voix et reconnaissance** : l'installateur télécharge la voix naturelle **Piper** et la reconnaissance vocale **Whisper**. Avec une carte NVIDIA (comme la RTX 3070 de l'ASUS TUF A17), il installe aussi l'accélération graphique et choisit le modèle Whisper le plus précis (large-v3-turbo), qui répond en une fraction de seconde. Si Ollama est installé, il télécharge aussi l'IA locale `qwen2.5:7b`. Sans carte NVIDIA, tout fonctionne sur le processeur, un peu plus lentement. En cas de souci, `config.toml` permet de revenir à Vosk et à la voix de Windows.
 
 ### L'intelligence artificielle (optionnel, mais recommandé)
 

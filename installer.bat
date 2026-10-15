@@ -32,6 +32,11 @@ if not errorlevel 1 (
 python -c "import tkinter" 2>nul
 if errorlevel 1 echo ATTENTION : tkinter manque, l ecran de scene ne marchera pas. Reinstallez Python en cochant "tcl/tk and IDLE".
 python -m viky --telecharger-modeles
+where ollama >nul 2>nul
+if not errorlevel 1 (
+  echo Ollama detecte : telechargement de l IA locale qwen2.5:7b ^(environ 4,7 Go^)...
+  ollama pull qwen2.5:7b
+)
 echo.
 echo Installation terminee ! Double-cliquez sur lancer_viky.bat pour demarrer Viky.
 pause

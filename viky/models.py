@@ -74,6 +74,9 @@ def download_whisper(size: str, models_dir: Path) -> None:
     except ImportError:
         print("faster-whisper n'est pas installé : Whisper ignoré.")
         return
+    from .recognizer import has_cuda, pick_size
+
+    size = pick_size(size, "cuda" if has_cuda() else "cpu")
     print(f"Téléchargement du modèle Whisper « {size} » (quelques centaines de Mo, une seule fois)…")
     WhisperModel(size, device="cpu", compute_type="int8", download_root=str(models_dir / "whisper"))
     print("Modèle Whisper installé.")
