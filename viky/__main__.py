@@ -35,11 +35,12 @@ def run_voice(assistant: Assistant) -> None:
     import sounddevice as sd
 
     from .audio import BLOCK_SECONDS, BLOCK_SIZE, SAMPLE_RATE, ClapDetector, Segmenter
-    from .recognizer import ModelMissing, Recognizer
+    from .recognizer import ModelMissing, make_recognizer
 
     config = assistant.config
     try:
-        recognizer = Recognizer(config.listen_langs, MODELS_DIR)
+        recognizer = make_recognizer(config.recognizer, config.listen_langs, MODELS_DIR,
+                                     config.whisper_size, config.whisper_device, config.wake_words)
     except ModelMissing:
         print("Aucun modèle de reconnaissance vocale trouvé.\n"
               "Lancez d'abord : python -m viky --telecharger-modeles")
@@ -111,10 +112,16 @@ def main() -> None:
     if args.telecharger_modeles:
         from .models import download_all
 
-        download_all(config.listen_langs, MODELS_DIR)
+        download_all(config.listen_langs, MODELS_DIR, config.piper_voices,
+                     config.whisper_size if config.recognizer == "whisper" else None)
         return
 
-    assistant = Assistant(config, Speaker(config.voice_rate, mute=args.muet))
+    from .models import piper_path
+
+    speaker = Speaker(config.voice_rate, mute=args.muet, engine=config.voice_engine,
+                      piper_voices={lang: piper_path(name, MODELS_DIR) for lang, name in config.piper_voices.items()},
+                      piper_speed=config.voice_speed)
+    assistant = Assistant(config, speaker)
     assistant.reminders.start()
     if config.remote:
         start_remote(assistant)

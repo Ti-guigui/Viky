@@ -48,7 +48,8 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         # --- rappels, minuteurs, briefing
         ("timer", r"^((lance|mets|demarre|fais|programme)( moi)? )?(un )?(minuteur|chrono|compte a rebours|timer)"
                   r"( de| pour| dans)? (?P<duration>.+)$"),
-        ("remind", r"^(rappelle moi|fais moi penser|previens moi|mets( moi)? un rappel|cree un rappel|ajoute un rappel)"
+        ("remind", r"^(rappel+e moi|rapel+e moi|rappe[lz]? moi|fais moi penser|previens moi|mets( moi)? un rappel|"
+                   r"cree un rappel|ajoute un rappel)"
                    r"(?P<rest>.*)$"),
         ("list_reminders", r"(quels sont mes rappels|^mes rappels$|liste (des|mes) rappels|qu est ce que j ai de prevu|"
                            r"^mon programme$)"),

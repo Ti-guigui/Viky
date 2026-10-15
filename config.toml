@@ -11,6 +11,19 @@ double_clap = true               # se réveiller en tapant deux fois dans les ma
 sensibilite_clap = 0.5           # de 0 (peu sensible) à 1 (très sensible)
 vitesse_voix = 180               # vitesse de parole
 
+[reconnaissance]
+# "whisper" = très précis (recommandé), "vosk" = léger mais moins précis
+moteur = "whisper"
+taille_whisper = "small"   # "medium" : encore plus précis avec une carte RTX 3060 ou mieux
+appareil = "auto"          # "auto" = carte graphique NVIDIA si possible, sinon processeur
+
+[voix]
+# "piper" = voix naturelle (recommandé), "systeme" = voix de Windows
+moteur = "piper"
+voix_fr = "fr_FR-siwis-medium"   # autres voix : fr_FR-upmc-medium, fr_FR-tom-medium (voix d'homme)
+voix_en = "en_US-amy-medium"
+vitesse = 1.0                    # 1.2 = plus rapide, 0.9 = plus lent
+
 [fichiers]
 # Viky cherche vos fichiers dans Bureau, Documents, Téléchargements, Images et Vidéos
 # (y compris OneDrive). Ajoutez ici d'autres dossiers, par exemple celui de vos spectacles :

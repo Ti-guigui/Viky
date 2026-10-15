@@ -45,6 +45,46 @@ def download_model(lang: str, models_dir: Path) -> Path:
     return target
 
 
-def download_all(langs: list[str], models_dir: Path) -> None:
+def piper_path(name: str, models_dir: Path) -> Path:
+    return models_dir / "piper" / f"{name}.onnx"
+
+
+def download_piper_voice(name: str, models_dir: Path) -> Path:
+    """Télécharge une voix Piper, par exemple « fr_FR-siwis-medium » (environ 60 Mo)."""
+    target = piper_path(name, models_dir)
+    if target.exists():
+        print(f"Voix « {name} » déjà présente.")
+        return target
+    locale, speaker, quality = name.split("-")
+    base = (f"https://huggingface.co/rhasspy/piper-voices/resolve/main/"
+            f"{locale.split('_')[0]}/{locale}/{speaker}/{quality}/{name}")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    print(f"Téléchargement de la voix « {name} »…")
+    for suffix in (".onnx.json", ".onnx"):
+        partial = target.with_name(name + suffix + ".part")
+        urllib.request.urlretrieve(base + suffix, partial, _progress)
+        partial.replace(target.with_name(name + suffix))
+    print(f"\nVoix « {name} » installée.")
+    return target
+
+
+def download_whisper(size: str, models_dir: Path) -> None:
+    try:
+        from faster_whisper import WhisperModel
+    except ImportError:
+        print("faster-whisper n'est pas installé : Whisper ignoré.")
+        return
+    print(f"Téléchargement du modèle Whisper « {size} » (quelques centaines de Mo, une seule fois)…")
+    WhisperModel(size, device="cpu", compute_type="int8", download_root=str(models_dir / "whisper"))
+    print("Modèle Whisper installé.")
+
+
+def download_all(langs: list[str], models_dir: Path, piper_voices: dict[str, str] | None = None,
+                 whisper_size: str | None = None) -> None:
     for lang in langs:
         download_model(lang, models_dir)
+    if whisper_size:
+        download_whisper(whisper_size, models_dir)
+    for lang, name in (piper_voices or {}).items():
+        if lang in langs:
+            download_piper_voice(name, models_dir)

@@ -24,6 +24,11 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+where nvidia-smi >nul 2>nul
+if not errorlevel 1 (
+  echo Carte NVIDIA detectee : installation de l acceleration graphique...
+  pip install -r requirements-gpu.txt
+)
 python -c "import tkinter" 2>nul
 if errorlevel 1 echo ATTENTION : tkinter manque, l ecran de scene ne marchera pas. Reinstallez Python en cochant "tcl/tk and IDLE".
 python -m viky --telecharger-modeles

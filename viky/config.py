@@ -49,6 +49,13 @@ class Config:
     remote_pin: str = ""
     remote_port: int = 8765
     data_dir: Path = field(default_factory=lambda: _documents() / "Viky")
+    voice_engine: str = "piper"
+    piper_voices: dict[str, str] = field(default_factory=lambda: {
+        "fr": "fr_FR-siwis-medium", "en": "en_US-amy-medium"})
+    voice_speed: float = 1.0
+    recognizer: str = "whisper"
+    whisper_size: str = "small"
+    whisper_device: str = "auto"
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -90,6 +97,18 @@ def load_config(path: Path | None = None) -> Config:
     config.use_claude = bool(ai.get("claude", config.use_claude))
     config.claude_model = ai.get("modele_claude", config.claude_model)
     config.claude_key = ai.get("cle_claude") or None
+
+    listening = data.get("reconnaissance", {})
+    config.recognizer = listening.get("moteur", config.recognizer)
+    config.whisper_size = listening.get("taille_whisper", config.whisper_size)
+    config.whisper_device = listening.get("appareil", config.whisper_device)
+
+    voice = data.get("voix", {})
+    config.voice_engine = voice.get("moteur", config.voice_engine)
+    config.voice_speed = float(voice.get("vitesse", config.voice_speed))
+    for lang in ("fr", "en"):
+        if voice.get(f"voix_{lang}"):
+            config.piper_voices[lang] = voice[f"voix_{lang}"]
 
     magic = data.get("magie", {})
     config.magic = load_magic(magic)

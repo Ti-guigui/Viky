@@ -1,0 +1,3 @@
+# Accélération par carte graphique NVIDIA (installée automatiquement si une carte est détectée)
+nvidia-cublas-cu12
+nvidia-cudnn-cu12>=9,<10
