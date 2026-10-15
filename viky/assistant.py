@@ -17,6 +17,7 @@ from .brain import Brain, BrainUnavailable
 from .config import Config
 from .files import FileIndex, kind_of, split_kind
 from .intents import Intent, parse_any
+from .magic import STAGE_PERSONA, SUSPENSE, MagicShow, parse_card
 from .messages import date_sentence, say, time_sentence
 from .numbers import parse_cell, parse_number, parse_value
 from .report import save_report
@@ -38,7 +39,9 @@ class Assistant:
                  brain: Brain | None = None,
                  weather: Weather | None = None,
                  news: ModuleType = news_feeds,
-                 clock: Callable[[], float] = time.monotonic) -> None:
+                 stage=None,
+                 clock: Callable[[], float] = time.monotonic,
+                 pause: Callable[[float], None] = time.sleep) -> None:
         self.config = config
         self.speaker = speaker
         self.actions = actions
@@ -51,6 +54,14 @@ class Assistant:
         self.news = news
         self.headlines: list = []
         self.last_report: Path | None = None
+        self.magic: MagicShow = config.magic
+        self.pause = pause
+        if stage is None:
+            from .stage import Stage
+
+            stage = Stage(self._projector_rect)
+        self.stage = stage
+        self._set_persona()
         self.clock = clock
         self.lang = config.lang
         self.awake_until = 0.0
@@ -82,6 +93,8 @@ class Assistant:
             return self._on_utterance(texts, require_wake)
 
     def _on_utterance(self, texts: dict[str, str], require_wake: bool) -> bool:
+        if self.magic.stage_mode and self._stage_cue(texts):
+            return True
         heard_wake = False
         stripped: dict[str, str] = {}
         for lang, text in texts.items():
@@ -101,8 +114,8 @@ class Assistant:
             elif len(question.split()) >= 3 and self.brain.available:
                 # Phrase inconnue mais assez longue : on la pose à l'IA.
                 intent = Intent("ask", self.lang, {"question": question})
-            elif heard_wake or len(question.split()) >= 2:
-                self.tell("not_understood")
+            elif (heard_wake or len(question.split()) >= 2) and not self.magic.stage_mode:
+                self.tell("not_understood")  # sur scène, Viky se tait plutôt que d'avouer
             if intent is None:
                 return True
 
@@ -288,10 +301,15 @@ class Assistant:
         self.projector.slideshow_end()
 
     def _do_black(self, lang):
-        self.projector.slideshow_black(True)
+        if self.projector.slideshow_running():
+            self.projector.slideshow_black(True)
+        else:
+            self.stage.black()
 
     def _do_resume(self, lang):
-        self.projector.slideshow_black(False)
+        if self.projector.slideshow_running():
+            self.projector.slideshow_black(False)
+        self.stage.hide()
 
     def _do_fullscreen(self, lang):
         self.projector.press("f11")
@@ -427,6 +445,123 @@ class Assistant:
             self.tell("no_report", lang)
             return
         self._show_file(lang, self.last_report, on_projector=bool(projector))
+
+
+    # --- magie
+
+    def _projector_rect(self):
+        screen = self.projector.projector()
+        return screen["rect"] if screen else None
+
+    def _set_persona(self) -> None:
+        self.brain.persona = STAGE_PERSONA if self.magic.stage_mode else None
+
+    def _stage_cue(self, texts: dict[str, str]) -> bool:
+        """Mots-codes et répliques préparées : déclenchés sans dire « Viky »."""
+        for lang in [self.lang] + [l for l in texts if l != self.lang]:
+            text = texts.get(lang, "")
+            code = self.magic.find_code(text)
+            if code:
+                print(f"[magie] mot-code « {code.phrase} » -> {code.effect}")
+                self.run_effect(code.effect, code.value, self.lang)
+                return True
+            reply = self.magic.find_reply(text)
+            if reply:
+                self.speaker.say(reply, self.lang)
+                return True
+        return False
+
+    def run_effect(self, effect: str, value: str, lang: str) -> str:
+        """Exécute un effet magique. Renvoie un petit message pour la télécommande."""
+        if effect == "reveler":
+            return self._reveal(lang)
+        if effect == "deviner":
+            return self._guess(lang)
+        if effect == "noir":
+            self._do_black(lang)
+        elif effect == "effacer":
+            self._do_resume(lang)
+        elif effect == "dire" and value:
+            self.speaker.say(value, lang)
+        elif effect == "afficher" and value:
+            self.stage.show_text(value, "machine")
+        elif effect == "charger":
+            self.magic.secret = value.strip()
+            card = self.magic.card
+            return f"chargé : {card.spoken(lang) if card else self.magic.secret}"
+        elif effect == "projeter" and value:
+            self._do_project(lang, value)
+        elif effect == "suivant":
+            self._do_next(lang)
+        elif effect == "precedent":
+            self._do_previous(lang)
+        elif effect == "mode":
+            self._set_stage_mode(not self.magic.stage_mode, lang, announce=False)
+        else:
+            return f"effet inconnu : {effect}"
+        return "ok"
+
+    def _reveal(self, lang) -> str:
+        card = self.magic.card
+        if card:
+            self.stage.show_card(card, lang)
+        elif self.magic.secret:
+            self.stage.show_text(self.magic.secret)
+        else:
+            return "aucun secret chargé"
+        return "révélé"
+
+    def _guess(self, lang) -> str:
+        if not self.magic.secret:
+            self.tell("guess_blurry", lang)
+            return "aucun secret chargé"
+        for line in SUSPENSE[lang]:
+            self.speaker.say(line, lang)
+            self.pause(1.2)
+        self.tell("guess_reveal", lang, secret=self.magic.secret_spoken(lang))
+        self._reveal(lang)
+        return "deviné"
+
+    def _set_stage_mode(self, on: bool, lang, announce: bool = True) -> None:
+        self.magic.stage_mode = on
+        self._set_persona()
+        if announce:
+            self.tell("stage_on" if on else "stage_off", lang)
+
+    def _do_stage_on(self, lang):
+        self._set_stage_mode(True, lang)
+
+    def _do_stage_off(self, lang):
+        self._set_stage_mode(False, lang)
+
+    def _do_reveal(self, lang):
+        if self._reveal(lang) == "aucun secret chargé":
+            self.tell("guess_blurry", lang)
+
+    def _do_guess(self, lang):
+        self._guess(lang)
+
+    def _do_show_text(self, lang, text):
+        self.stage.show_text(text[:1].upper() + text[1:], "machine")
+
+    def _do_clear_stage(self, lang):
+        self.stage.hide()
+
+    def remote_action(self, action: str, value: str) -> dict:
+        """Appelé par la télécommande du téléphone (depuis un autre fil)."""
+        message = ""
+        if action != "etat":
+            with self.lock:
+                try:
+                    if action == "secret":
+                        action = "charger"
+                    message = self.run_effect(action, value, self.lang)
+                except Exception as error:
+                    traceback.print_exc()
+                    message = f"erreur : {error}"
+        card = self.magic.card
+        return {"secret": card.spoken(self.lang) if card else self.magic.secret,
+                "spectacle": self.magic.stage_mode, "message": message}
 
 
 def _spoken(value) -> str:

@@ -6,6 +6,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .magic import MagicShow, load_magic
 from .text import normalize
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -36,6 +37,10 @@ class Config:
     use_claude: bool = True
     claude_model: str = "claude-opus-5-5"
     claude_key: str | None = None
+    magic: MagicShow = field(default_factory=MagicShow)
+    remote: bool = True
+    remote_pin: str = ""
+    remote_port: int = 8765
 
 
 def load_config(path: Path | None = None) -> Config:
@@ -77,6 +82,12 @@ def load_config(path: Path | None = None) -> Config:
     config.use_claude = bool(ai.get("claude", config.use_claude))
     config.claude_model = ai.get("modele_claude", config.claude_model)
     config.claude_key = ai.get("cle_claude") or None
+
+    magic = data.get("magie", {})
+    config.magic = load_magic(magic)
+    config.remote = bool(magic.get("telecommande", config.remote))
+    config.remote_pin = str(magic.get("code_pin", "") or "")
+    config.remote_port = int(magic.get("port", config.remote_port))
 
     if config.lang not in config.listen_langs:
         config.listen_langs.insert(0, config.lang)

@@ -79,6 +79,19 @@ def run_voice(assistant: Assistant) -> None:
             segmenter.reset()
 
 
+def start_remote(assistant: Assistant) -> None:
+    from .remote import Remote, new_pin
+
+    config = assistant.config
+    remote = Remote(assistant.remote_action, config.remote_pin or new_pin(), config.remote_port)
+    try:
+        remote.start()
+    except OSError as error:
+        print(f"[Viky] Télécommande indisponible ({error}).")
+        return
+    print(f"[Viky] Télécommande : ouvrez {remote.url} sur votre téléphone (même Wi-Fi). Code : {remote.pin}")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="viky", description="Viky, assistante vocale hors ligne.")
     parser.add_argument("--texte", action="store_true", help="taper les commandes au clavier au lieu de parler")
@@ -102,6 +115,8 @@ def main() -> None:
         return
 
     assistant = Assistant(config, Speaker(config.voice_rate, mute=args.muet))
+    if config.remote:
+        start_remote(assistant)
     try:
         run_text(assistant) if args.texte else run_voice(assistant)
     except KeyboardInterrupt:

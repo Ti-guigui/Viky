@@ -40,6 +40,15 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("greet", r"^(bonjour|salut|coucou|bonsoir|hello)$"),
         ("lang_en", r"^(parle|passe|reponds)( moi)? en anglais$"),
         ("lang_fr", r"^(parle|passe|reponds)( moi)? en francais$"),
+        # --- magie
+        ("stage_on", r"^(mode spectacle|passe en mode spectacle|active le mode spectacle)$"),
+        ("stage_off", r"^(mode normal|fin du spectacle|desactive le mode spectacle|quitte le mode spectacle)$"),
+        ("reveal", r"^(revele|devoile|montre|affiche)( la| ta| sa| leur| notre| le| ma)? "
+                   r"(carte|prediction|revelation|reponse|pensee|secret)$|^(revele|devoile)( tout| le secret)?$"),
+        ("guess", r"(devine|quelle (est (sa|la|leur|ma) )?carte|a quoi (il|elle|je|ils|elles) pense|"
+                  r"lis dans (ses|leurs|mes|les) pensees|qu (a t il|a t elle|ai je) choisi)"),
+        ("show_text", r"^ecris (?P<text>.+) (sur|a) (l ecran|le projecteur|le grand ecran)$"),
+        ("clear_stage", r"^(efface l ecran|efface tout|ecran vide|enleve (ca|la revelation|le texte))$"),
         # --- diaporama et projecteur
         ("next", r"^((diapo|diapositive|page|slide|image|photo) suivante|suivant|suivante|la suite|avance)$"),
         ("previous", r"^((diapo|diapositive|page|slide|image|photo) precedente|precedent|precedente|"
@@ -119,6 +128,12 @@ _PATTERNS: dict[str, list[tuple[str, str]]] = {
         ("greet", r"^(hello|hi|hey|good (morning|evening|afternoon))$"),
         ("lang_fr", r"^(speak|switch to|answer in|talk in) french$"),
         ("lang_en", r"^(speak|switch to|answer in|talk in) english$"),
+        ("stage_on", r"^(show mode|stage mode( on)?|start the show)$"),
+        ("stage_off", r"^(normal mode|end of the show|stage mode off)$"),
+        ("reveal", r"^(reveal|show)( the| my| her| his| their)? (card|prediction|secret|answer)$|^reveal( it)?$"),
+        ("guess", r"(guess|what card|which card|what (is|are) (he|she|they|i) thinking)"),
+        ("show_text", r"^write (?P<text>.+) on the (screen|projector|big screen)$"),
+        ("clear_stage", r"^(clear the screen|clear everything|blank screen)$"),
         ("next", r"^(next( slide| page| picture)?|go on|continue)$"),
         ("previous", r"^(previous( slide| page| picture)?|go back|back)$"),
         ("goto", r"^(go|jump|skip)( back)? to (slide|page)( number)? (?P<n>.+)$"),

@@ -24,6 +24,8 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+python -c "import tkinter" 2>nul
+if errorlevel 1 echo ATTENTION : tkinter manque, l ecran de scene ne marchera pas. Reinstallez Python en cochant "tcl/tk and IDLE".
 python -m viky --telecharger-modeles
 echo.
 echo Installation terminee ! Double-cliquez sur lancer_viky.bat pour demarrer Viky.

@@ -12,7 +12,8 @@ def normalize(text: str) -> str:
 
     « Ouvre-moi l'Explorateur ! » devient « ouvre moi l explorateur ».
     """
-    text = unicodedata.normalize("NFKD", text.lower())
+    text = text.lower().replace("œ", "oe").replace("æ", "ae")
+    text = unicodedata.normalize("NFKD", text)
     text = "".join(c for c in text if not unicodedata.combining(c))
     text = re.sub(r"[^a-z0-9.]+", " ", text)
     text = re.sub(r"(?<![a-z0-9])\.|\.(?![a-z0-9])", " ", text)

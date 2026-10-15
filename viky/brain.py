@@ -60,7 +60,11 @@ class Brain:
         self.use_claude = use_claude and bool(self.claude_key)
         self.use_local = use_local
         self.history: list[dict] = []  # derniers échanges, pour « approfondis »
+        self.persona: dict[str, str] | None = None  # personnalité de scène (mode spectacle)
         self._client = None
+
+    def _style(self, lang: str) -> str:
+        return SPOKEN_STYLE[lang] + (self.persona[lang] if self.persona else "")
 
     # ------------------------------------------------------------ disponibilité
 
@@ -129,7 +133,7 @@ class Brain:
     def _ollama(self, messages: list[dict], lang: str) -> str:
         body = json.dumps({
             "model": self.local_model, "stream": False,
-            "messages": [{"role": "system", "content": SPOKEN_STYLE[lang]}] + messages,
+            "messages": [{"role": "system", "content": self._style(lang)}] + messages,
         }).encode()
         request = urllib.request.Request(f"{self.ollama_url}/api/chat", data=body,
                                          headers={"Content-Type": "application/json"})
@@ -146,7 +150,7 @@ class Brain:
         request = {
             "model": self.claude_model,
             "max_tokens": 16000,
-            "system": SPOKEN_STYLE[lang],
+            "system": self._style(lang),
             "output_config": {"effort": effort},
             "betas": ["server-side-fallback-2026-07-01"],
             "fallbacks": "default",

@@ -62,6 +62,10 @@ MESSAGES: dict[str, dict] = {
         "research_saved": "Le rapport détaillé est enregistré. Dites « affiche le rapport » pour le voir, "
                           "ou « projette le rapport » pour le montrer au public.",
         "no_report": "Je n'ai pas encore fait de recherche.",
+        "stage_on": "Mode spectacle activé. Que la magie commence.",
+        "stage_off": "Retour au mode normal.",
+        "guess_blurry": "Mes visions sont troubles ce soir… Concentrez-vous plus fort.",
+        "guess_reveal": "Je vois… {secret} !",
         "jokes": [
             "Pourquoi les plongeurs plongent-ils toujours en arrière ? "
             "Parce que sinon, ils tombent dans le bateau.",
@@ -127,6 +131,10 @@ MESSAGES: dict[str, dict] = {
         "research_saved": "The detailed report is saved. Say \"show the report\" to see it, "
                           "or \"show the report on the projector\" for the audience.",
         "no_report": "I haven't done any research yet.",
+        "stage_on": "Show mode on. Let the magic begin.",
+        "stage_off": "Back to normal mode.",
+        "guess_blurry": "My visions are blurry tonight… Concentrate harder.",
+        "guess_reveal": "I see… {secret}!",
         "jokes": [
             "Why do programmers prefer dark mode? Because light attracts bugs.",
             "Why was the computer cold? It left its Windows open.",
@@ -146,7 +154,7 @@ def say(lang: str, key: str, **kwargs) -> str:
 
 def time_sentence(lang: str, now: datetime) -> str:
     if lang == "fr":
-        hours = "une heure" if now.hour == 1 else f"{now.hour} heures"
+        hours = {0: "minuit", 12: "midi", 1: "une heure", 13: "13 heures"}.get(now.hour, f"{now.hour} heures")
         minutes = f" {now.minute}" if now.minute else ""
         return f"Il est {hours}{minutes}."
     return f"It's {now.strftime('%I:%M %p').lstrip('0')}."

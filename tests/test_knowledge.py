@@ -256,3 +256,14 @@ def test_internet_down_is_explained():
     viky, speaker = make_viky(FakeBrain(), weather=types.SimpleNamespace(report=broken))
     viky.on_utterance({"fr": "la météo"}, require_wake=False)
     assert speaker.said == ["Je n'arrive pas à joindre internet pour le moment."]
+
+
+def test_time_sentences():
+    from datetime import datetime
+
+    from viky.messages import time_sentence
+
+    assert time_sentence("fr", datetime(2026, 1, 1, 0, 9)) == "Il est minuit 9."
+    assert time_sentence("fr", datetime(2026, 1, 1, 12, 0)) == "Il est midi."
+    assert time_sentence("fr", datetime(2026, 1, 1, 1, 30)) == "Il est une heure 30."
+    assert time_sentence("fr", datetime(2026, 1, 1, 21, 5)) == "Il est 21 heures 5."

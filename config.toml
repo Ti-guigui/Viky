@@ -44,6 +44,33 @@ claude = true
 modele_claude = "claude-opus-5-5"
 cle_claude = ""
 
+[magie]
+mode_spectacle = false    # démarrer directement en mode spectacle
+telecommande = true       # télécommande secrète sur le téléphone (même Wi-Fi que le PC)
+code_pin = ""             # code de la télécommande (vide = un nouveau code à chaque lancement)
+port = 8765
+
+# Mots-codes : en mode spectacle, quand vous prononcez cette phrase (n'importe où dans
+# une phrase, sans dire « Viky »), l'effet se déclenche en silence.
+# Effets : reveler, deviner, noir, effacer, dire, afficher, charger, projeter, suivant, precedent
+[[magie.codes]]
+phrase = "regardez bien l'écran"
+effet = "reveler"
+
+[[magie.codes]]
+phrase = "faisons le noir"
+effet = "noir"
+
+[[magie.codes]]
+phrase = "je sens une présence"
+effet = "dire"
+valeur = "Je suis là. Et je vois tout."
+
+# Répliques préparées : quand on dit cette phrase, Viky répond exactement le texte indiqué.
+[magie.repliques]
+"es-tu prête" = "Toujours. Je suis née prête."
+"présente-toi au public" = "Bonsoir à toutes et à tous. Je suis Viky, l'assistante du magicien. Ne me quittez pas des yeux… ni des oreilles."
+
 [applications]
 # Ajoutez vos propres applications : "nom prononcé" = "commande ou chemin complet"
 # "mon jeu" = 'C:\Jeux\MonJeu\jeu.exe'
